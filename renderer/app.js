@@ -16,7 +16,7 @@ const state = {
   settings: {},
   rate: {},
   theme: 'dark', // dark | light
-  version: '1.2.0',
+  version: '1.2.1',
   update: null, // { ok, current, latest, hasUpdate, downloadUrl, ... }
   view: 'browse', // browse | favorites | likes
   tab: 'top',
@@ -423,7 +423,7 @@ async function init() {
   // 以 settings.json 为准（localStorage 只用于首屏快速上色）
   applyTheme(data.settings.theme === 'light' ? 'light' : 'dark');
 
-  state.version = data.version || '1.2.0';
+  state.version = data.version || '1.2.1';
   dom.statusVersion.textContent = state.version;
   el('aboutVersion').textContent = state.version;
   el('countCurated').textContent = state.curated.total;

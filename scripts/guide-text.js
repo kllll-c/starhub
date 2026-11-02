@@ -41,6 +41,8 @@ module.exports = function guideText() {
     '     2) 进入「API Keys」页面（https://open.bigmodel.cn/usercenter/apikeys）创建 Key',
     '     3) 回到本软件：右上角「设置」→ 翻译引擎选「智谱 GLM」→ 填 API Key → 保存',
     '     接口地址已内置，模型默认 glm-4-flash，也可改成 glm-4-plus 等。',
+    '     提示：glm-4-flash 的生成速度约 20 字/秒，一篇长 README 仍可能需要 1~2 分钟；',
+    '           程序已按 3200 字分批、2 路并发并自动重试，想更快可在设置里换模型或改用 DeepSeek。',
     '',
     '  D. AI 翻译（译文质量最好，按调用量收费）',
     '     在「设置」里选「AI 翻译」，填任意 OpenAI 兼容接口：',

@@ -12,6 +12,13 @@ const crypto = require('crypto');
 
 const MARKDOWN_MAX_CHARS = 6000;
 
+// OpenAI 兼容通道（AI 翻译 / 智谱）：按 3200 字一批，默认 2 路并发；
+// 命中限流或并发被拒时自动退回串行再补一次，单批漏翻的段落会逐条补翻。
+const CHAT_BATCH_CHARS = 3200;
+const CHAT_WORKERS = 2;
+const CHAT_MAX_ATTEMPTS = 3;
+const CHAT_FILL_LIMIT = 12;
+
 /* ---------------- 语种识别 ---------------- */
 
 // 按 Unicode 区段统计各文字系统，用于判断「这段文字是什么语言」以及「是否已经是中文」
@@ -1041,78 +1048,193 @@ class Translator {
     return this._translateBlocksWithChat(blocks, sourceLang, this._chatConfig('zhipu'));
   }
 
+  /** 构造一次 chat/completions 请求体。 */
+  _chatPayload(texts, cfg, sourceLabel) {
+    return {
+      model: cfg.model,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content:
+            `你是开源项目本地化译者。把用户给出的 JSON 数组里的每个段落翻译成简体中文（源语言可能是${sourceLabel}，也可能是混合语言的段落，请自动识别并只输出中文译文）。` +
+            '要求：保留 Markdown 结构、代码、命令、URL、徽章和 @@数字@@ 占位符；技术专有名词（如 React、Docker、Kubernetes）保持英文；' +
+            '不要添加解释或前后缀。只输出 JSON：{"items": ["译文1", "译文2", ...]}，数组长度必须与输入一致。',
+        },
+        { role: 'user', content: JSON.stringify(texts) },
+      ],
+    };
+  }
+
+  /** 解析模型返回的 {"items":[...]}，兼容代码围栏与裸数组。 */
+  _parseChatItems(content) {
+    const text = stripCodeFence(content || '');
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed.items)) return parsed.items;
+    } catch (_) {
+      /* 继续尝试裸数组 */
+    }
+    const m = text.match(/\[[\s\S]*\]/);
+    if (m) {
+      try {
+        const arr = JSON.parse(m[0]);
+        if (Array.isArray(arr)) return arr;
+      } catch (_) {
+        /* 忽略 */
+      }
+    }
+    return [];
+  }
+
+  /** 发一次请求，网络错误与 HTTP 错误都带上可重试标记。 */
+  async _chatOnce(texts, cfg, sourceLabel) {
+    const res = await fetch(`${cfg.base}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify(this._chatPayload(texts, cfg, sourceLabel)),
+      signal: AbortSignal.timeout(90000),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      const err = new Error(`${cfg.label}接口返回 ${res.status}：${body.slice(0, 200)}`);
+      err.status = res.status;
+      err.retryAfter = res.headers && res.headers.get ? res.headers.get('retry-after') : null;
+      throw err;
+    }
+    const data = await res.json();
+    const content = data.choices && data.choices[0] && data.choices[0].message
+      ? data.choices[0].message.content
+      : '';
+    const items = this._parseChatItems(content);
+    if (!items.length) throw new Error(`${cfg.label}返回格式无法解析`);
+    return items;
+  }
+
+  /**
+   * 带退避重试的请求：429 / 5xx / 网络超时可以重试，
+   * 其余（签名错误、余额不足、格式错误）直接抛出，避免白等。
+   */
+  async _chatWithRetry(texts, cfg, sourceLabel) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= CHAT_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        return await this._chatOnce(texts, cfg, sourceLabel);
+      } catch (err) {
+        lastError = err;
+        const status = Number(err.status);
+        const retryable =
+          status === 429 ||
+          (status >= 500 && status <= 599) ||
+          /fetch failed|network|timeout|timed out|abort|ECONN|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(
+            err.message || '',
+          );
+        if (!retryable || attempt === CHAT_MAX_ATTEMPTS) break;
+        const retryAfter = Number(err.retryAfter);
+        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+          ? Math.min(retryAfter * 1000, 10000)
+          : 1200 * attempt;
+        await new Promise((r) => setTimeout(r, waitMs));
+      }
+    }
+    throw lastError;
+  }
+
+  /**
+   * OpenAI 兼容通道的批量翻译：
+   * - 完全相同的段落只翻译一次，再按索引回填（模型遇到重复项容易把数组压短）
+   * - 2 路并发，长 README 的等待时间大约减半
+   * - 并发失败（限流 / 连接被拒）时退回串行补一次
+   */
   async _translateBlocksWithChat(blocks, sourceLang, cfg) {
     if (!cfg.apiKey) throw new Error(`未配置${cfg.label} API Key`);
-    const base = cfg.base;
-    const model = cfg.model;
     const sourceLabel = LANG_LABELS[sourceLang] || '任意语言';
     const results = new Array(blocks.length).fill('');
+
+    const uniques = [];
+    const seen = new Map();
+    blocks.forEach((text, index) => {
+      if (seen.has(text)) {
+        uniques[seen.get(text)].indices.push(index);
+        return;
+      }
+      seen.set(text, uniques.length);
+      uniques.push({ text, indices: [index] });
+    });
+
     // 按长度分批，减少请求次数
     const batches = [];
     let current = [];
     let currentLen = 0;
-    blocks.forEach((text, index) => {
-      const len = text.length;
-      if (current.length && currentLen + len > 3200) {
+    uniques.forEach((block) => {
+      if (current.length && currentLen + block.text.length > CHAT_BATCH_CHARS) {
         batches.push(current);
         current = [];
         currentLen = 0;
       }
-      current.push({ text, index });
-      currentLen += len;
+      current.push(block);
+      currentLen += block.text.length;
     });
     if (current.length) batches.push(current);
 
-    for (const batch of batches) {
-      const payload = {
-        model,
-        temperature: 0.2,
-        messages: [
-          {
-            role: 'system',
-            content:
-              `你是开源项目本地化译者。把用户给出的 JSON 数组里的每个段落翻译成简体中文（源语言可能是${sourceLabel}，也可能是混合语言的段落，请自动识别并只输出中文译文）。` +
-              '要求：保留 Markdown 结构、代码、命令、URL、徽章和 @@数字@@ 占位符；技术专有名词（如 React、Docker、Kubernetes）保持英文；' +
-              '不要添加解释或前后缀。只输出 JSON：{"items": ["译文1", "译文2", ...]}，数组长度必须与输入一致。',
-          },
-          { role: 'user', content: JSON.stringify(batch.map((b) => b.text)) },
-        ],
-      };
-      const res = await fetch(`${base}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${cfg.apiKey}`,
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(90000),
+    const hasMissing = (batch) => batch.some((b) => b.indices.some((i) => !results[i]));
+
+    const translateBatch = async (batch) => {
+      const todo = batch.filter((b) => b.indices.some((i) => !results[i]));
+      if (!todo.length) return;
+      const items = await this._chatWithRetry(todo.map((b) => b.text), cfg, sourceLabel);
+      const filled = new Set();
+      todo.forEach((block, i) => {
+        const text = items[i];
+        if (typeof text === 'string' && text.trim()) {
+          block.indices.forEach((idx) => {
+            results[idx] = text;
+          });
+          filled.add(block);
+        }
       });
-      if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        throw new Error(`${cfg.label}接口返回 ${res.status}：${body.slice(0, 200)}`);
-      }
-      const data = await res.json();
-      const content = data.choices && data.choices[0] && data.choices[0].message
-        ? data.choices[0].message.content
-        : '';
-      let items = [];
-      try {
-        const parsed = JSON.parse(stripCodeFence(content));
-        items = Array.isArray(parsed.items) ? parsed.items : [];
-      } catch (_) {
-        const m = stripCodeFence(content).match(/\[[\s\S]*\]/);
-        if (m) {
-          try {
-            items = JSON.parse(m[0]);
-          } catch (_) {
-            items = [];
+      // 模型偶尔会把多段合并 / 漏段：对缺失的段落逐条补翻，避免半篇英文
+      const missing = todo.filter((b) => !filled.has(b)).slice(0, CHAT_FILL_LIMIT);
+      for (const block of missing) {
+        try {
+          const [text] = await this._chatWithRetry([block.text], cfg, sourceLabel);
+          if (typeof text === 'string' && text.trim()) {
+            block.indices.forEach((idx) => {
+              results[idx] = text;
+            });
           }
+        } catch (_) {
+          /* 补翻失败就保留原文，交给上层决定是否降级 */
         }
       }
-      if (!items.length) throw new Error(`${cfg.label}返回格式无法解析`);
-      batch.forEach((b, i) => {
-        if (typeof items[i] === 'string') results[b.index] = items[i];
-      });
+    };
+
+    const queue = batches.slice();
+    const failures = [];
+    const worker = async () => {
+      while (queue.length) {
+        const batch = queue.shift();
+        try {
+          await translateBatch(batch);
+        } catch (err) {
+          failures.push({ batch, err });
+        }
+      }
+    };
+    const workers = Math.min(CHAT_WORKERS, Math.max(1, batches.length));
+    await Promise.all(Array.from({ length: workers }, () => worker()));
+
+    // 并发失败的批次再串行补一次；仍然失败就把错误抛给上层（会退回离线术语表）
+    for (const { batch, err } of failures) {
+      if (!hasMissing(batch)) continue;
+      try {
+        await translateBatch(batch);
+      } catch (_) {
+        throw err;
+      }
     }
     return results;
   }
