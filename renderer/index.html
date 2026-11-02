@@ -120,6 +120,28 @@
                   <option value="100000">10 万+</option>
                 </select>
               </label>
+              <label class="select-wrap">
+                <span>近 7 日增速</span>
+                <select id="growth7Select" title="按最近 7 天新增 Star 数筛选（需要 GitHub Token 或本机历史快照）">
+                  <option value="0">不限</option>
+                  <option value="10">+10</option>
+                  <option value="50">+50</option>
+                  <option value="100">+100</option>
+                  <option value="300">+300</option>
+                  <option value="1000">+1000</option>
+                </select>
+              </label>
+              <label class="select-wrap">
+                <span>近 30 日增速</span>
+                <select id="growth30Select" title="按最近 30 天新增 Star 数筛选（需要 GitHub Token 或本机历史快照）">
+                  <option value="0">不限</option>
+                  <option value="50">+50</option>
+                  <option value="200">+200</option>
+                  <option value="500">+500</option>
+                  <option value="1000">+1000</option>
+                  <option value="5000">+5000</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -182,7 +204,7 @@
         <div class="status-right">
           <span id="statusCache"></span>
           <span class="sep">·</span>
-          <span>StarHub v<span id="statusVersion">1.0.0</span></span>
+          <span>StarHub v<span id="statusVersion">1.2.0</span></span>
         </div>
       </footer>
     </div>
@@ -216,11 +238,13 @@
               <select id="inputProvider">
                 <option value="mymemory">MyMemory 免费在线翻译（无需 Key，有每日额度）</option>
                 <option value="openai">AI 翻译（OpenAI 兼容接口，质量最好）</option>
+                <option value="zhipu">智谱 GLM（OpenAI 兼容，glm-4-flash 有免费额度）</option>
                 <option value="baidu">百度翻译（需 APP ID + 密钥，按字符计费）</option>
                 <option value="youdao">有道翻译（需应用 ID + 应用密钥，按字符计费）</option>
                 <option value="off">仅离线术语表（不联网，只汉化标题）</option>
               </select>
             </label>
+            <p class="form-hint">下方只显示当前引擎需要填写的配置，切换下拉框即可换引擎。</p>
             <label class="field check">
               <input id="inputAutoTranslate" type="checkbox" />
               <span>自动汉化列表简介（自动识别英语 / 日语 / 韩语 / 俄语 / 西语等）</span>
@@ -229,56 +253,90 @@
               <input id="inputAutoReadme" type="checkbox" />
               <span>自动汉化 README（打开详情即在后台翻译）</span>
             </label>
-            <label class="field">
-              <span>MyMemory 联系邮箱（可选，用于提升免费额度）</span>
-              <input id="inputEmail" type="email" placeholder="you@example.com" />
-            </label>
-            <p class="form-hint">
-              MyMemory 免费额度约每天 5000 词（按出口 IP 计算），一次长 README 汉化就可能耗尽。免费引擎下自动汉化 README 会先翻前 2500 个字符，其余内容可点「重新汉化」继续或切换 AI 翻译（无每日额度限制，可整篇自动汉化）。
-            </p>
-            <div class="field-row">
+
+            <div class="engine-panel" data-engine="mymemory" hidden>
               <label class="field">
-                <span>AI 接口地址</span>
-                <input id="inputBaseUrl" type="text" placeholder="https://api.openai.com/v1" />
+                <span>MyMemory 联系邮箱（可选，用于提升免费额度）</span>
+                <input id="inputEmail" type="email" placeholder="you@example.com" />
+              </label>
+              <p class="form-hint">
+                MyMemory 免费额度约每天 5000 词（按出口 IP 计算），一次长 README 汉化就可能耗尽。免费引擎下自动汉化 README 会先翻前 2500 个字符，其余内容可点「重新汉化」继续或切换 AI 翻译（无每日额度限制，可整篇自动汉化）。
+              </p>
+            </div>
+
+            <div class="engine-panel" data-engine="openai" hidden>
+              <div class="field-row">
+                <label class="field">
+                  <span>AI 接口地址</span>
+                  <input id="inputBaseUrl" type="text" placeholder="https://api.openai.com/v1" />
+                </label>
+                <label class="field">
+                  <span>模型</span>
+                  <input id="inputModel" type="text" placeholder="gpt-4o-mini / deepseek-chat" />
+                </label>
+              </div>
+              <label class="field">
+                <span>AI 接口 Key</span>
+                <input id="inputApiKey" type="password" placeholder="sk-xxx（仅保存在本机）" />
+              </label>
+              <p class="form-hint">
+                兼容 OpenAI 协议的国内服务同样可用，例如 DeepSeek（https://api.deepseek.com/v1）、Moonshot、通义等。
+              </p>
+            </div>
+
+            <div class="engine-panel" data-engine="zhipu" hidden>
+              <label class="field">
+                <span>智谱 API Key</span>
+                <input id="inputZhipuApiKey" type="password" placeholder="xxxxxxxx.xxxxxxxx（仅保存在本机）" />
               </label>
               <label class="field">
                 <span>模型</span>
-                <input id="inputModel" type="text" placeholder="gpt-4o-mini / deepseek-chat" />
+                <input id="inputZhipuModel" type="text" placeholder="glm-4-flash" />
               </label>
+              <p class="form-hint">
+                接口地址已内置（https://open.bigmodel.cn/api/paas/v4），使用 OpenAI 兼容的 chat/completions 协议。
+                在智谱开放平台「API Keys」页面（<a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" rel="noreferrer">open.bigmodel.cn</a>）创建 Key；
+                默认模型 glm-4-flash 有免费额度，可换成 glm-4-plus 等更高阶模型。
+              </p>
             </div>
-            <label class="field">
-              <span>AI 接口 Key</span>
-              <input id="inputApiKey" type="password" placeholder="sk-xxx（仅保存在本机）" />
-            </label>
-            <p class="form-hint">
-              兼容 OpenAI 协议的国内服务同样可用，例如 DeepSeek（https://api.deepseek.com/v1）、Moonshot、通义等。
-            </p>
-            <div class="field-row">
-              <label class="field">
-                <span>百度翻译 APP ID</span>
-                <input id="inputBaiduAppId" type="text" placeholder="在百度翻译开放平台「管理控制台」获取" />
-              </label>
-              <label class="field">
-                <span>百度翻译密钥</span>
-                <input id="inputBaiduKey" type="password" placeholder="••••••（仅保存在本机）" />
-              </label>
+
+            <div class="engine-panel" data-engine="baidu" hidden>
+              <div class="field-row">
+                <label class="field">
+                  <span>百度翻译 APP ID</span>
+                  <input id="inputBaiduAppId" type="text" placeholder="在百度翻译开放平台「管理控制台」获取" />
+                </label>
+                <label class="field">
+                  <span>百度翻译密钥</span>
+                  <input id="inputBaiduKey" type="password" placeholder="••••••（仅保存在本机）" />
+                </label>
+              </div>
+              <p class="form-hint">
+                百度通用翻译接口地址已内置（https://fanyi-api.baidu.com/api/trans/vip/translate），无需填写；只需填 APP ID 与密钥。标准版 QPS 为 1，程序会自动限速并按错误码重试。
+              </p>
             </div>
-            <p class="form-hint">
-              百度通用翻译接口地址已内置（https://fanyi-api.baidu.com/api/trans/vip/translate），无需填写；只需填 APP ID 与密钥。标准版 QPS 为 1，程序会自动限速并按错误码重试。
-            </p>
-            <div class="field-row">
-              <label class="field">
-                <span>有道翻译应用 ID</span>
-                <input id="inputYoudaoAppKey" type="text" placeholder="在网易有道智云控制台「我的应用」获取" />
-              </label>
-              <label class="field">
-                <span>有道翻译应用密钥</span>
-                <input id="inputYoudaoSecret" type="password" placeholder="••••••（仅保存在本机）" />
-              </label>
+
+            <div class="engine-panel" data-engine="youdao" hidden>
+              <div class="field-row">
+                <label class="field">
+                  <span>有道翻译应用 ID</span>
+                  <input id="inputYoudaoAppKey" type="text" placeholder="在网易有道智云控制台「我的应用」获取" />
+                </label>
+                <label class="field">
+                  <span>有道翻译应用密钥</span>
+                  <input id="inputYoudaoSecret" type="password" placeholder="••••••（仅保存在本机）" />
+                </label>
+              </div>
+              <p class="form-hint">
+                有道接口地址已内置（https://openapi.youdao.com/api），使用 v3 签名，无需填写；应用 ID 与应用密钥需成对填写，任何一个缺失都会回退到免费在线翻译。获取路径：ai.youdao.com → 控制台 → 应用管理 → 我的应用（新建「文本翻译」应用）。
+              </p>
             </div>
-            <p class="form-hint">
-              有道接口地址已内置（https://openapi.youdao.com/api），使用 v3 签名，无需填写；应用 ID 与应用密钥需成对填写，任何一个缺失都会回退到免费在线翻译。获取路径：ai.youdao.com → 控制台 → 应用管理 → 我的应用（新建「文本翻译」应用）。
-            </p>
+
+            <div class="engine-panel" data-engine="off" hidden>
+              <p class="form-hint">
+                离线模式不联网，只按内置术语表汉化仓库标题与常见技术名词，适合完全离线或所有在线额度都已用尽的情况。
+              </p>
+            </div>
           </section>
 
           <section class="form-section">
@@ -305,7 +363,7 @@
         </div>
         <div class="modal-body">
           <div class="about-version">
-            <span>当前版本 v<span id="aboutVersion">1.0.0</span></span>
+            <span>当前版本 v<span id="aboutVersion">1.2.0</span></span>
             <button class="tip-btn ghost" id="btnCheckUpdate">检查更新</button>
             <span class="about-update" id="aboutUpdateText"></span>
           </div>
@@ -315,7 +373,8 @@
             <li>按 Star 数 / Release 下载量 / 首字母 A-Z 排序</li>
             <li>每个仓库自动打上中文标签（形态 + 用途），点击标签或在搜索框输入标签即可筛选</li>
             <li>应用内渲染 README 预览，无需跳转浏览器</li>
-            <li>外语自动汉化：自动识别英 / 日 / 韩 / 俄 / 西 / 法 / 德等语种，简介与 README 都可在后台自动译成中文（支持 AI 翻译 / 百度翻译 / MyMemory 免费接口 / 离线术语表）</li>
+            <li>外语自动汉化：自动识别英 / 日 / 韩 / 俄 / 西 / 法 / 德等语种，简介与 README 都可在后台自动译成中文（支持 AI 翻译 / 智谱 GLM / 百度翻译 / 有道翻译 / MyMemory 免费接口 / 离线术语表，设置里按引擎分面板配置）</li>
+            <li>按最低 Star、近 7 日 Star 增速、近 30 日 Star 增速筛选（增速需 GitHub Token 或本机每日快照）</li>
             <li>一键打开原站地址、复制链接</li>
             <li>收藏与点赞，数据保存在本机</li>
             <li>亮 / 暗主题一键切换（标题栏最左侧按钮，选择自动记住）</li>

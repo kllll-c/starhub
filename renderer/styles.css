@@ -338,6 +338,7 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
 .toolbar {
   flex: 0 0 auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 10px 18px;
@@ -475,8 +476,11 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
 
 .toolbar-right {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 10px;
+  row-gap: 8px;
   margin-left: auto;
 }
 
@@ -813,6 +817,21 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
   flex: 0 0 auto;
 }
 
+/* 近 7 / 30 日 Star 增速徽标 */
+.growth-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(61, 220, 151, 0.1);
+  border: 1px solid rgba(61, 220, 151, 0.24);
+  color: #7ce7b9;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  cursor: default;
+}
+
 .zh-badge {
   font-size: 10px;
   padding: 1px 6px;
@@ -900,8 +919,10 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
 
 .card-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  row-gap: 6px;
   padding-top: 8px;
   border-top: 1px solid var(--border-soft);
   font-size: 11px;
@@ -1612,6 +1633,23 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
   flex: 1;
 }
 
+/* 翻译引擎面板：下拉框只展开当前引擎的配置，避免多个引擎的字段并列堆叠 */
+.engine-panel {
+  margin: 2px 0 4px;
+  padding: 12px 14px 4px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--panel-2);
+}
+
+.engine-panel[hidden] {
+  display: none;
+}
+
+.engine-panel .form-hint:last-child {
+  margin-bottom: 8px;
+}
+
 .row-actions {
   display: flex;
   align-items: center;
@@ -1862,6 +1900,17 @@ html[data-theme="light"] .card-desc {
 html[data-theme="light"] .star-pill {
   background: rgba(176, 125, 16, 0.1);
   border-color: rgba(176, 125, 16, 0.24);
+}
+
+html[data-theme="light"] .growth-pill {
+  background: rgba(13, 147, 102, 0.1);
+  border-color: rgba(13, 147, 102, 0.26);
+  color: #0a7a54;
+}
+
+html[data-theme="light"] .engine-panel {
+  background: #f6f8fd;
+  border-color: rgba(53, 104, 212, 0.14);
 }
 
 html[data-theme="light"] .zh-badge {

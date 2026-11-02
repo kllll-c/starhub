@@ -1,10 +1,11 @@
 /**
  * 汉化引擎（翻译层）：
  *   1. ai       —— 调用任意 OpenAI 兼容接口（DeepSeek / Kimi / 通义 / OpenAI…），质量最好，支持 Markdown 结构化翻译
- *   2. baidu    —— 百度翻译开放平台（需 APP ID + 密钥，按字符计费，支持 auto 识别源语种）
- *   3. youdao   —— 有道智云文本翻译（需应用 ID + 应用密钥，v3 签名，标准版按字符计费）
- *   4. mymemory —— 免费在线接口，无需 API Key，适合翻译仓库简介（有每日额度）
- *   5. offline  —— 离线术语表，翻译标题与常见技术名词
+ *   2. zhipu    —— 智谱开放平台 GLM（OpenAI 兼容接口，glm-4-flash 有免费额度）
+ *   3. baidu    —— 百度翻译开放平台（需 APP ID + 密钥，按字符计费，支持 auto 识别源语种）
+ *   4. youdao   —— 有道智云文本翻译（需应用 ID + 应用密钥，v3 签名，标准版按字符计费）
+ *   5. mymemory —— 免费在线接口，无需 API Key，适合翻译仓库简介（有每日额度）
+ *   6. offline  —— 离线术语表，翻译标题与常见技术名词
  * 所有结果都会落盘缓存，同一个仓库/README 只会翻译一次。
  */
 const crypto = require('crypto');
@@ -739,6 +740,9 @@ class Translator {
     if (p === 'openai' && !(s.openaiApiKey || '').trim()) {
       return { name: 'mymemory', fallbackFrom: 'openai', reason: '未填写 AI 翻译 API Key，已回退到免费在线翻译' };
     }
+    if (p === 'zhipu' && !(s.zhipuApiKey || '').trim()) {
+      return { name: 'mymemory', fallbackFrom: 'zhipu', reason: '未填写智谱 API Key，已回退到免费在线翻译' };
+    }
     if (p === 'baidu' && (!(s.baiduAppId || '').trim() || !(s.baiduKey || '').trim())) {
       return { name: 'mymemory', fallbackFrom: 'baidu', reason: '未填写百度翻译 APP ID 或密钥，已回退到免费在线翻译' };
     }
@@ -1008,11 +1012,39 @@ class Translator {
     return out;
   }
 
-  async translateBlocksWithOpenAI(blocks, sourceLang = 'auto') {
+  /**
+   * OpenAI 兼容通道的配置：AI 翻译使用用户自定义地址，智谱使用官方固定地址。
+   */
+  _chatConfig(provider) {
     const s = this.store.getSettings();
-    if (!(s.openaiApiKey || '').trim()) throw new Error('未配置 AI 翻译 API Key');
-    const base = (s.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
-    const model = s.openaiModel || 'gpt-4o-mini';
+    if (provider === 'zhipu') {
+      return {
+        base: 'https://open.bigmodel.cn/api/paas/v4',
+        apiKey: (s.zhipuApiKey || '').trim(),
+        model: (s.zhipuModel || 'glm-4-flash').trim() || 'glm-4-flash',
+        label: '智谱',
+      };
+    }
+    return {
+      base: (s.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, ''),
+      apiKey: (s.openaiApiKey || '').trim(),
+      model: (s.openaiModel || 'gpt-4o-mini').trim() || 'gpt-4o-mini',
+      label: 'AI 翻译',
+    };
+  }
+
+  async translateBlocksWithOpenAI(blocks, sourceLang = 'auto') {
+    return this._translateBlocksWithChat(blocks, sourceLang, this._chatConfig('openai'));
+  }
+
+  async translateBlocksWithZhipu(blocks, sourceLang = 'auto') {
+    return this._translateBlocksWithChat(blocks, sourceLang, this._chatConfig('zhipu'));
+  }
+
+  async _translateBlocksWithChat(blocks, sourceLang, cfg) {
+    if (!cfg.apiKey) throw new Error(`未配置${cfg.label} API Key`);
+    const base = cfg.base;
+    const model = cfg.model;
     const sourceLabel = LANG_LABELS[sourceLang] || '任意语言';
     const results = new Array(blocks.length).fill('');
     // 按长度分批，减少请求次数
@@ -1050,14 +1082,14 @@ class Translator {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${s.openaiApiKey}`,
+          Authorization: `Bearer ${cfg.apiKey}`,
         },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(90000),
       });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
-        throw new Error(`AI 翻译接口返回 ${res.status}：${body.slice(0, 200)}`);
+        throw new Error(`${cfg.label}接口返回 ${res.status}：${body.slice(0, 200)}`);
       }
       const data = await res.json();
       const content = data.choices && data.choices[0] && data.choices[0].message
@@ -1077,7 +1109,7 @@ class Translator {
           }
         }
       }
-      if (!items.length) throw new Error('AI 翻译返回格式无法解析');
+      if (!items.length) throw new Error(`${cfg.label}返回格式无法解析`);
       batch.forEach((b, i) => {
         if (typeof items[i] === 'string') results[b.index] = items[i];
       });
@@ -1117,6 +1149,9 @@ class Translator {
       let translated;
       if (provider.name === 'openai') {
         const [out] = await this.translateBlocksWithOpenAI([raw], lang.code);
+        translated = out;
+      } else if (provider.name === 'zhipu') {
+        const [out] = await this.translateBlocksWithZhipu([raw], lang.code);
         translated = out;
       } else if (provider.name === 'baidu') {
         translated = await this.translateTextWithBaidu(raw, lang.code);
@@ -1211,6 +1246,11 @@ class Translator {
     try {
       if (provider.name === 'openai') {
         const outs = await this.translateBlocksWithOpenAI(candidates.map((c) => c.text), lang.code);
+        outs.forEach((t, i) => {
+          if (t) translatedTexts[i] = t;
+        });
+      } else if (provider.name === 'zhipu') {
+        const outs = await this.translateBlocksWithZhipu(candidates.map((c) => c.text), lang.code);
         outs.forEach((t, i) => {
           if (t) translatedTexts[i] = t;
         });

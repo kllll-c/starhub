@@ -16,7 +16,7 @@ const state = {
   settings: {},
   rate: {},
   theme: 'dark', // dark | light
-  version: '1.0.0',
+  version: '1.2.0',
   update: null, // { ok, current, latest, hasUpdate, downloadUrl, ... }
   view: 'browse', // browse | favorites | likes
   tab: 'top',
@@ -24,6 +24,8 @@ const state = {
   sort: 'stars',
   language: 'all',
   minStars: 0,
+  growth7: 0,
+  growth30: 0,
   keyword: '',
   page: 1,
   pageSize: 24,
@@ -68,6 +70,8 @@ const dom = {
   sortSelect: el('sortSelect'),
   langSelect: el('langSelect'),
   starsSelect: el('starsSelect'),
+  growth7Select: el('growth7Select'),
+  growth30Select: el('growth30Select'),
   sourceSeg: el('sourceSeg'),
   drawer: el('drawer'),
   drawerBody: el('drawerBody'),
@@ -287,6 +291,12 @@ function providerLabel() {
   if (s.translationProvider === 'openai' && !s.hasOpenaiKey) {
     return 'AI 翻译（未配置 Key，将回退免费翻译）';
   }
+  if (s.translationProvider === 'zhipu' && s.hasZhipuKey) {
+    return `智谱 GLM（${s.zhipuModel || 'glm-4-flash'}）`;
+  }
+  if (s.translationProvider === 'zhipu' && !s.hasZhipuKey) {
+    return '智谱 GLM（未配置 Key，将回退免费翻译）';
+  }
   if (s.translationProvider === 'baidu' && s.hasBaiduKey) {
     return '百度翻译';
   }
@@ -413,7 +423,7 @@ async function init() {
   // 以 settings.json 为准（localStorage 只用于首屏快速上色）
   applyTheme(data.settings.theme === 'light' ? 'light' : 'dark');
 
-  state.version = data.version || '1.0.0';
+  state.version = data.version || '1.2.0';
   dom.statusVersion.textContent = state.version;
   el('aboutVersion').textContent = state.version;
   el('countCurated').textContent = state.curated.total;
@@ -550,6 +560,7 @@ const BAIDU_CONSOLE_URL = 'https://fanyi-api.baidu.com/api/trans/product/desktop
 function translationConfigured() {
   const s = state.settings || {};
   if (s.translationProvider === 'openai') return Boolean(s.hasOpenaiKey);
+  if (s.translationProvider === 'zhipu') return Boolean(s.hasZhipuKey);
   if (s.translationProvider === 'baidu') return Boolean(s.hasBaiduKey);
   if (s.translationProvider === 'youdao') return Boolean(s.hasYoudaoKey);
   if (s.translationProvider === 'off') return true; // 用户主动选了离线术语表，不再提示
@@ -571,12 +582,13 @@ function renderSetupTip() {
   const freeNow =
     s.translationProvider === 'baidu' ||
     s.translationProvider === 'openai' ||
+    s.translationProvider === 'zhipu' ||
     s.translationProvider === 'youdao';
   dom.setupTip.innerHTML = `
     <div class="setup-tip-text">
       <strong>${freeNow ? '汉化引擎还没填凭据' : '汉化引擎还没配置'}</strong>：
       当前${freeNow ? '会回退到' : '使用'} MyMemory 免费翻译（每天约 5000 词，README 自动汉化只翻前 2500 字符）。
-      配好<strong>百度翻译</strong>、<strong>有道翻译</strong>或<strong>AI 翻译</strong>后，可整篇、按量计费地自动汉化所有外语仓库。
+      配好<strong>百度翻译</strong>、<strong>有道翻译</strong>、<strong>智谱 GLM</strong>或<strong>AI 翻译</strong>后，可整篇、按量计费地自动汉化所有外语仓库。
     </div>
     <div class="setup-tip-actions">
       <button class="tip-btn primary" data-act="setup-open">去配置（3 步）</button>
@@ -662,6 +674,21 @@ function bindEvents() {
   dom.starsSelect.addEventListener('change', () => {
     state.minStars = Number(dom.starsSelect.value) || 0;
     load({ reset: true });
+  });
+
+  dom.growth7Select.addEventListener('change', () => {
+    state.growth7 = Number(dom.growth7Select.value) || 0;
+    load({ reset: true });
+  });
+
+  dom.growth30Select.addEventListener('change', () => {
+    state.growth30 = Number(dom.growth30Select.value) || 0;
+    load({ reset: true });
+  });
+
+  // 翻译引擎：只显示下拉框选中的那个引擎的配置面板
+  el('inputProvider').addEventListener('change', () => {
+    syncEnginePanels(el('inputProvider').value);
   });
 
   let searchTimer = null;
@@ -877,6 +904,8 @@ function renderHead() {
   }
   if (state.language !== 'all') meta.push(`<span class="chip">${esc(state.language)}</span>`);
   if (state.minStars) meta.push(`<span class="chip">≥ ${formatNum(state.minStars)} Star</span>`);
+  if (state.growth7) meta.push(`<span class="chip accent">近 7 日 +${formatNum(state.growth7)} Star</span>`);
+  if (state.growth30) meta.push(`<span class="chip accent">近 30 日 +${formatNum(state.growth30)} Star</span>`);
   dom.headMeta.innerHTML = meta.join('');
   if (state.source === 'curated') {
     dom.headTitle.textContent = state.tab === 'top' ? '内置精选库' : `${category ? category.name : ''} · 内置精选`;
@@ -956,6 +985,8 @@ async function load({ reset = false, append = false } = {}) {
     sort: state.sort,
     language: state.language,
     minStars: state.minStars,
+    growth7: state.growth7,
+    growth30: state.growth30,
     page: state.page,
     pageSize: state.pageSize,
     force: state.forceNext,
@@ -1036,6 +1067,9 @@ function renderGrid(items) {
       dom.emptyDesc.textContent = '还没有收藏。在列表或详情页点击 ❤ 即可收藏。';
     } else if (state.view === 'likes') {
       dom.emptyDesc.textContent = '还没有点赞。点击 👍 记录你觉得好用的项目。';
+    } else if (state.growth7 || state.growth30) {
+      dom.emptyDesc.textContent =
+        '当前增速阈值下没有匹配的仓库：可以调低阈值；增速需要 GitHub Token 才能立即采样，未填写时需积累本机每日快照历史（可在设置里填 Token 后用「刷新」重试）。';
     } else if (state.activeTag) {
       dom.emptyDesc.textContent = `标签「${state.activeTag.label}」下暂时没有结果，可以换个标签，或切换到「内置精选」看看。`;
     } else {
@@ -1045,6 +1079,24 @@ function renderGrid(items) {
   }
   dom.empty.hidden = true;
   dom.grid.innerHTML = items.map(cardHtml).join('');
+}
+
+/**
+ * 增速徽标：有数据时显示「7 日 +N / 30 日 +N」，并说明数据来源。
+ * 采样上限（最近一页星标都落在窗口内）时用「≥」表示。
+ */
+function growthHtml(growth) {
+  if (!growth) return '';
+  const pill = (days, value, capped) => {
+    if (value == null) return '';
+    const badge = `${capped ? '≥' : '+'}${formatNum(value)}`;
+    const source =
+      growth.source === 'token'
+        ? '按最近一页星标采样（最多 100 条）'
+        : `按本机历史快照估算${growth[`days${days}`] ? `（覆盖 ${growth[`days${days}`]} 天）` : ''}`;
+    return `<span class="growth-pill" title="近 ${days} 日新增 Star：${source}">${days} 日 ${badge}</span>`;
+  };
+  return `${pill(7, growth.growth7, growth.capped7)}${pill(30, growth.growth30, growth.capped30)}`;
 }
 
 function cardHtml(repo) {
@@ -1075,6 +1127,7 @@ function cardHtml(repo) {
     <div class="desc-tools">${descToolsHtml(repo)}</div>
     ${tags ? `<div class="card-tags">${tags}</div>` : ''}
     <div class="card-foot">
+      ${growthHtml(repo.growth)}
       ${downloads}
       <span class="metric"><span class="lang-dot" style="background:${langColor(repo.language)}"></span>${esc(repo.language || '未知')}</span>
       <div class="card-actions">
@@ -1438,6 +1491,7 @@ function setReadmeMode(mode) {
 function engineName(result) {
   if (!result) return '翻译引擎';
   if (result.engine === 'openai') return 'AI 翻译';
+  if (result.engine === 'zhipu') return '智谱 GLM';
   if (result.engine === 'baidu') return '百度翻译';
   if (result.engine === 'youdao') return '有道翻译';
   if (result.engine === 'mymemory') return 'MyMemory 免费翻译';
@@ -1514,7 +1568,9 @@ async function translateReadme({ force = false, auto = false } = {}) {
   const provider = state.settings.translationProvider;
   // 免费 / 按字符计费的引擎额度紧张：自动模式只翻一部分，手动点击则整篇翻译
   const paid = provider === 'baidu' || provider === 'youdao';
-  const maxChars = !auto || provider === 'openai' ? undefined : paid ? 5000 : 2500;
+  // AI 类（OpenAI 兼容 / 智谱）没有每日额度，自动模式也整篇翻译
+  const ai = provider === 'openai' || provider === 'zhipu';
+  const maxChars = !auto || ai ? undefined : paid ? 5000 : 2500;
   state.readme.loadingTranslation = true;
   renderReadmeNote(
     maxChars
@@ -1531,7 +1587,7 @@ async function translateReadme({ force = false, auto = false } = {}) {
   state.readme.loadingTranslation = false;
   if (res.error) {
     renderReadmeNote(
-      `汉化失败：${esc(res.error)}<br>可以先阅读原文；到「设置」切换为 AI 翻译、百度或有道翻译后点「重新汉化」即可。`,
+      `汉化失败：${esc(res.error)}<br>可以先阅读原文；到「设置」切换为 AI 翻译、智谱 GLM、百度或有道翻译后点「重新汉化」即可。`,
     );
     return;
   }
@@ -1592,6 +1648,16 @@ async function translateDetailDesc() {
 
 /* ---------------- 设置 ---------------- */
 
+/**
+ * 汉化引擎按需显示：下拉框选中哪个引擎，就只展开该引擎的配置面板。
+ */
+function syncEnginePanels(provider) {
+  const current = provider || 'mymemory';
+  document.querySelectorAll('.engine-panel').forEach((panel) => {
+    panel.hidden = panel.dataset.engine !== current;
+  });
+}
+
 async function openSettings() {
   const s = await api.getSettings();
   el('inputToken').value = s.githubToken || '';
@@ -1602,10 +1668,13 @@ async function openSettings() {
   el('inputBaseUrl').value = s.openaiBaseUrl || '';
   el('inputModel').value = s.openaiModel || '';
   el('inputApiKey').value = s.openaiApiKey || '';
+  el('inputZhipuApiKey').value = s.zhipuApiKey || '';
+  el('inputZhipuModel').value = s.zhipuModel || 'glm-4-flash';
   el('inputBaiduAppId').value = s.baiduAppId || '';
   el('inputBaiduKey').value = s.baiduKey || '';
   el('inputYoudaoAppKey').value = s.youdaoAppKey || '';
   el('inputYoudaoSecret').value = s.youdaoAppSecret || '';
+  syncEnginePanels(s.translationProvider);
   const stats = await api.cacheStats().catch(() => ({ files: 0 }));
   el('cacheStatsText').textContent = `缓存文件：${stats.files}`;
   dom.settingsModal.hidden = false;
@@ -1625,6 +1694,8 @@ async function saveSettings() {
     openaiBaseUrl: el('inputBaseUrl').value.trim() || 'https://api.openai.com/v1',
     openaiModel: el('inputModel').value.trim() || 'gpt-4o-mini',
     openaiApiKey: el('inputApiKey').value.trim(),
+    zhipuApiKey: el('inputZhipuApiKey').value.trim(),
+    zhipuModel: el('inputZhipuModel').value.trim() || 'glm-4-flash',
     baiduAppId: el('inputBaiduAppId').value.trim(),
     baiduKey: el('inputBaiduKey').value.trim(),
     youdaoAppKey: el('inputYoudaoAppKey').value.trim(),
@@ -1641,6 +1712,7 @@ async function saveSettings() {
     ...saved,
     hasGithubToken: Boolean(saved.githubToken),
     hasOpenaiKey: Boolean(saved.openaiApiKey),
+    hasZhipuKey: Boolean(saved.zhipuApiKey),
     hasBaiduKey: Boolean(saved.baiduAppId && saved.baiduKey),
     hasYoudaoKey: Boolean(saved.youdaoAppKey && saved.youdaoAppSecret),
   };

@@ -9,6 +9,7 @@ const { Store } = require('./store');
 const { DiskCache } = require('./cache');
 const { GithubApi, GithubError } = require('./github');
 const { Translator } = require('./translate');
+const { StarHistory } = require('./star-history');
 const curated = require('./curated');
 const { CATEGORIES, TOP_CATEGORY, SORTS, LANGUAGES, LANG_COLORS } = require('../shared/categories');
 const { buildTags, findTag, listTags } = require('../shared/tags');
@@ -31,6 +32,7 @@ let store = null;
 let cache = null;
 let api = null;
 let translator = null;
+let starHistory = null;
 
 function allCategories() {
   return [TOP_CATEGORY, ...CATEGORIES];
@@ -42,6 +44,7 @@ function initServices() {
   cache = new DiskCache(path.join(userData, 'cache'), { maxFiles: 4000 });
   api = new GithubApi({ cache, store });
   translator = new Translator({ cache, store });
+  starHistory = new StarHistory(userData);
 }
 
 function decorate(repo) {
@@ -108,6 +111,69 @@ function attachLocalState(items) {
   }));
 }
 
+/* ---------------- Star 增速（近 7 日 / 近 30 日） ---------------- */
+
+const GROWTH_WORKERS = 3;
+
+/**
+ * 取一组仓库的增速：
+ *   1) 有 GitHub Token 时优先按星标时间采样（立即可用，每仓库 1 次请求，缓存 6 小时）
+ *   2) 没有 Token（或采样失败）时退回本机每日快照
+ */
+async function collectGrowth(items, { sample = true } = {}) {
+  const out = {};
+  if (!items.length) return out;
+  const hasToken = Boolean((store.getSettings().githubToken || '').trim());
+  const queue = items.slice();
+  const worker = async () => {
+    while (queue.length) {
+      const repo = queue.shift();
+      let best = null;
+      if (sample && hasToken) {
+        try {
+          const sampled = await api.getStarGrowth(repo.fullName, repo.stars);
+          if (sampled && sampled.available) best = sampled;
+        } catch (_) {
+          /* 采样失败时退回本机快照 */
+        }
+      }
+      if (!best) {
+        const snap = starHistory.growth(repo.fullName, repo.stars);
+        if (snap && snap.available) best = snap;
+      }
+      out[repo.fullName] = best;
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(GROWTH_WORKERS, queue.length) }, () => worker()),
+  );
+  return out;
+}
+
+function growthMatches(growth, growth7, growth30) {
+  if (!growth) return false;
+  const pass7 = !growth7 || (Number(growth.growth7) || 0) >= growth7;
+  const pass30 = !growth30 || (Number(growth.growth30) || 0) >= growth30;
+  return pass7 && pass30;
+}
+
+function growthFiltersNote(growth7, growth30, { hasToken, missing, total }) {
+  if (!growth7 && !growth30) return '';
+  const window = [growth7 ? `近 7 日 ≥ ${growth7}` : '', growth30 ? `近 30 日 ≥ ${growth30}` : '']
+    .filter(Boolean)
+    .join(' 且 ');
+  const parts = [`Star 增速筛选（${window}）`];
+  if (missing) {
+    parts.push(
+      hasToken
+        ? `${missing}/${total} 个仓库暂时取不到增速（接口失败或超出采样上限），已从结果中排除`
+        : `${missing}/${total} 个仓库没有历史数据：GitHub 匿名接口不提供星标时间，可在设置里填写 Token 立即采样，或保持使用一段时间让本机每日快照积累历史`,
+    );
+  }
+  if (hasToken) parts.push('增速按最近一页星标（最多 100 条）采样，超过 100 显示为 ≥100');
+  return parts.join(' · ');
+}
+
 async function listRepos(params = {}) {
   const {
     source = 'online',
@@ -116,6 +182,8 @@ async function listRepos(params = {}) {
     sort = 'stars',
     language = 'all',
     minStars = 0,
+    growth7 = 0,
+    growth30 = 0,
     page = 1,
     pageSize = 24,
     force = false,
@@ -145,14 +213,30 @@ async function listRepos(params = {}) {
     const notes = [`内置精选库（${curated.totalCount} 个仓库，中文资料人工整理，Star 数为离线快照）`];
     if (tag) notes.push(`标签「${tag.label}」命中 ${data.total} 个仓库`);
     if (sort === 'alpha') notes.push('按仓库名首字母 A→Z 排列');
+    let growth = {};
+    if (growth7 || growth30) {
+      // 内置库的 Star 是离线快照，不能当作「当前值」写进历史，只用已有快照估算
+      growth = await collectGrowth(items, { sample: false });
+      const total = items.length;
+      const missing = items.filter((r) => !growth[r.fullName]).length;
+      items = items.filter((r) => growthMatches(growth[r.fullName], growth7, growth30));
+      notes.push(
+        growthFiltersNote(growth7, growth30, { hasToken: false, missing, total }).replace(
+          'Star 增速筛选',
+          '内置库 Star 增速筛选',
+        ),
+      );
+    }
     return {
       ...data,
-      items: attachLocalState(items.map(decorate)),
+      items: attachLocalState(
+        items.map((r) => ({ ...decorate(r), growth: growth[r.fullName] || null })),
+      ),
       source: 'curated',
       query: '',
       tag: tagInfo,
       rate: api.getRateLimit(),
-      note: notes.join(' · '),
+      note: notes.filter(Boolean).join(' · '),
     };
   }
 
@@ -177,6 +261,9 @@ async function listRepos(params = {}) {
     hasMore = start + pageSize < search.items.length;
   }
 
+  // 记录当天的 Star 快照（本机历史，供没有 Token 时估算增速）
+  starHistory.recordMany(search.items);
+
   const notes = [];
   if (tag) notes.push(tagHit.exact ? `标签「${tag.label}」：${tag.desc}` : `按标签「${tag.label}」搜索（${tag.desc}）`);
   if (spec.postSort === 'downloads') {
@@ -184,8 +271,20 @@ async function listRepos(params = {}) {
   }
   if (alpha) notes.push(`首字母排序基于 Star 最高的 ${search.items.length} 个结果，按仓库名 A→Z 排列`);
 
+  let growth = {};
+  if (growth7 || growth30) {
+    growth = await collectGrowth(list);
+    const total = list.length;
+    const hasToken = Boolean((store.getSettings().githubToken || '').trim());
+    const missing = list.filter((r) => !growth[r.fullName]).length;
+    list = list.filter((r) => growthMatches(growth[r.fullName], growth7, growth30));
+    notes.push(growthFiltersNote(growth7, growth30, { hasToken, missing, total }));
+  }
+
   return {
-    items: attachLocalState(list.map(decorate)),
+    items: attachLocalState(
+      list.map((r) => ({ ...decorate(r), growth: growth[r.fullName] || null })),
+    ),
     total: search.total,
     page,
     pageSize,
@@ -194,7 +293,7 @@ async function listRepos(params = {}) {
     query: q,
     tag: tagInfo,
     rate: api.getRateLimit(),
-    note: notes.join(' · '),
+    note: notes.filter(Boolean).join(' · '),
   };
 }
 
@@ -627,11 +726,34 @@ function createWindow() {
         await wait(900);
         await shot('screenshot-settings.png');
         const setDebug = await mainWindow.webContents.executeJavaScript(
-          'JSON.stringify({hint: document.querySelector(".form-hint").textContent.trim().slice(0,80), provider: document.getElementById("inputProvider").value, providers: [...document.getElementById("inputProvider").options].map(o=>o.value), auto: document.getElementById("inputAutoTranslate").checked, autoReadme: document.getElementById("inputAutoReadme").checked, baiduFields: !!(document.getElementById("inputBaiduAppId") && document.getElementById("inputBaiduKey")), youdaoFields: !!(document.getElementById("inputYoudaoAppKey") && document.getElementById("inputYoudaoSecret")), modalVisible: !document.getElementById("settingsModal").hidden && document.getElementById("settingsModal").offsetHeight > 0, cacheText: document.getElementById("cacheStatsText").textContent})',
+          'JSON.stringify({hint: document.querySelector(".form-hint").textContent.trim().slice(0,80), provider: document.getElementById("inputProvider").value, providers: [...document.getElementById("inputProvider").options].map(o=>o.value), auto: document.getElementById("inputAutoTranslate").checked, autoReadme: document.getElementById("inputAutoReadme").checked, baiduFields: !!(document.getElementById("inputBaiduAppId") && document.getElementById("inputBaiduKey")), youdaoFields: !!(document.getElementById("inputYoudaoAppKey") && document.getElementById("inputYoudaoSecret")), zhipuFields: !!(document.getElementById("inputZhipuApiKey") && document.getElementById("inputZhipuModel")), visibleEngines: [...document.querySelectorAll(".engine-panel")].filter(p=>!p.hidden).map(p=>p.dataset.engine), modalVisible: !document.getElementById("settingsModal").hidden && document.getElementById("settingsModal").offsetHeight > 0, cacheText: document.getElementById("cacheStatsText").textContent})',
         );
         console.log('[smoke] 设置面板:', setDebug);
+        // 切换引擎下拉：只展开选中的引擎面板
+        const switchDebug = await mainWindow.webContents.executeJavaScript(
+          '(function(){ var s=document.getElementById("inputProvider"); s.value="zhipu"; s.dispatchEvent(new Event("change")); return JSON.stringify({visible: [...document.querySelectorAll(".engine-panel")].filter(p=>!p.hidden).map(p=>p.dataset.engine), zhipuKey: !!document.getElementById("inputZhipuApiKey").offsetHeight}); })()',
+        );
+        console.log('[smoke] 引擎面板切换:', switchDebug);
+        await shot('screenshot-settings-zhipu.png');
         await mainWindow.webContents.executeJavaScript('document.getElementById("btnCloseSettings").click(); true');
         await wait(600);
+      });
+
+      await step('Star 增速筛选', async () => {
+        await mainWindow.webContents.executeJavaScript(
+          'var s=document.getElementById("growth7Select"); s.value="100"; s.dispatchEvent(new Event("change")); true',
+        );
+        await wait(9000);
+        await shot('screenshot-growth.png');
+        const growthDebug = await mainWindow.webContents.executeJavaScript(
+          'JSON.stringify({g7: document.getElementById("growth7Select").value, g30: document.getElementById("growth30Select").value, cards: document.querySelectorAll(".card").length, chips: [...document.querySelectorAll("#headMeta .chip")].map(n=>n.textContent.trim()), notice: document.getElementById("notice").textContent.trim().slice(0,120), empty: document.getElementById("emptyDesc").textContent.trim().slice(0,50), apiError: document.getElementById("empty").hidden ? "" : "shown"})',
+        );
+        console.log('[smoke] Star 增速筛选:', growthDebug);
+        // 复位，避免影响后续截图
+        await mainWindow.webContents.executeJavaScript(
+          'var s=document.getElementById("growth7Select"); s.value="0"; s.dispatchEvent(new Event("change")); true',
+        );
+        await wait(4000);
       });
 
       await step('更新提示', async () => {
@@ -739,6 +861,8 @@ function registerIpc() {
         hasGithubToken: Boolean(settings.githubToken),
         hasOpenaiKey: Boolean(settings.openaiApiKey),
         openaiApiKey: '',
+        hasZhipuKey: Boolean(settings.zhipuApiKey),
+        zhipuApiKey: '',
         hasBaiduKey: Boolean(settings.baiduAppId && settings.baiduKey),
         baiduKey: '',
         hasYoudaoKey: Boolean(settings.youdaoAppKey && settings.youdaoAppSecret),
@@ -876,6 +1000,7 @@ function registerIpc() {
     const incoming = { ...patch };
     if (incoming.githubToken && incoming.githubToken.includes('•')) delete incoming.githubToken;
     if (incoming.openaiApiKey && incoming.openaiApiKey.includes('•')) delete incoming.openaiApiKey;
+    if (incoming.zhipuApiKey && incoming.zhipuApiKey.includes('•')) delete incoming.zhipuApiKey;
     if (incoming.baiduKey && incoming.baiduKey.includes('•')) delete incoming.baiduKey;
     if (incoming.youdaoAppSecret && incoming.youdaoAppSecret.includes('•')) delete incoming.youdaoAppSecret;
     const saved = store.saveSettings(incoming);
@@ -896,6 +1021,7 @@ function registerIpc() {
     return {
       provider: s.translationProvider,
       hasOpenaiKey: Boolean(s.openaiApiKey),
+      hasZhipuKey: Boolean(s.zhipuApiKey),
       hasBaiduKey: Boolean(s.baiduAppId && s.baiduKey),
       hasYoudaoKey: Boolean(s.youdaoAppKey && s.youdaoAppSecret),
       model: s.openaiModel,

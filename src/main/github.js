@@ -286,6 +286,96 @@ class GithubApi {
       ttl: 24 * 60 * 60 * 1000,
     });
   }
+
+  /**
+   * 近 7 / 30 日 Star 增速：GitHub 没有「增速」接口，这里读取星标列表的最后一页
+   * （每条带 starred_at 时间），统计窗口内新增的星标数。
+   *
+   * 注意：
+   *   - 匿名请求 stargazers 会返回 401，必须配置 GitHub Token
+   *   - 每页最多 100 条，因此增速是「采样值」：若整页都落在窗口内，结果记为 ≥100
+   *   - 结果缓存 6 小时，避免重复消耗接口额度
+   */
+  async getStarGrowth(fullName, stars, { force = false } = {}) {
+    const cacheKey = `gh:stargrowth:${fullName}`;
+    if (!force) {
+      const hit = this.cache.get(cacheKey);
+      if (hit) return hit;
+    }
+    const token = (this.store.getSettings().githubToken || '').trim();
+    if (!token) {
+      return {
+        fullName,
+        available: false,
+        reason: 'GitHub 星标时间接口需要 Token，未配置时只能用本机历史快照',
+        growth7: null,
+        growth30: null,
+        source: 'none',
+      };
+    }
+
+    const total = Number(stars) || 0;
+    if (total <= 0) {
+      const empty = {
+        fullName,
+        available: true,
+        source: 'token',
+        growth7: 0,
+        growth30: 0,
+        sampled: 0,
+        capped7: false,
+        capped30: false,
+      };
+      this.cache.set(cacheKey, empty, 6 * 60 * 60 * 1000);
+      return empty;
+    }
+
+    // 最新的星标在最后一页；GitHub 列表接口最多 1000 页（10 万条）
+    const perPage = 100;
+    const lastPage = Math.min(Math.ceil(total / perPage), 1000);
+    const url = `${API_BASE}/repos/${fullName}/stargazers?per_page=${perPage}&page=${lastPage}`;
+    let list;
+    try {
+      list = await this.request(url, {
+        ttl: 6 * 60 * 60 * 1000,
+        accept: 'application/vnd.github.star+json',
+        force,
+      });
+    } catch (err) {
+      const failed = {
+        fullName,
+        available: false,
+        reason: err.message,
+        growth7: null,
+        growth30: null,
+        source: 'none',
+      };
+      this.cache.set(cacheKey, failed, 30 * 60 * 1000);
+      return failed;
+    }
+
+    const dates = (Array.isArray(list) ? list : [])
+      .map((item) => (item && item.starred_at ? Date.parse(item.starred_at) : NaN))
+      .filter((t) => Number.isFinite(t));
+    const now = Date.now();
+    const within7 = dates.filter((t) => now - t <= 7 * 24 * 60 * 60 * 1000).length;
+    const within30 = dates.filter((t) => now - t <= 30 * 24 * 60 * 60 * 1000).length;
+    // 整页都在窗口内，说明真实增量至少是 100，界面上用「≥」表示
+    const full = dates.length >= perPage;
+    const payload = {
+      fullName,
+      available: true,
+      source: 'token',
+      growth7: within7,
+      growth30: within30,
+      sampled: dates.length,
+      capped7: full && within7 === dates.length,
+      capped30: full && within30 === dates.length,
+      truncated: Math.ceil(total / perPage) > 1000,
+    };
+    this.cache.set(cacheKey, payload, 6 * 60 * 60 * 1000);
+    return payload;
+  }
 }
 
 module.exports = { GithubApi, GithubError, mapRepo, rewriteReadmeLinks, API_BASE };
