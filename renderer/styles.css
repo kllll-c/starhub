@@ -1633,6 +1633,40 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
   flex: 1;
 }
 
+/* 模型切换：输入框带 datalist 下拉，旁边是「拉取模型」按钮 */
+.model-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-row .model-select {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  background: var(--panel) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='%238b949e' fill='none' stroke-width='1.6'/></svg>")
+    no-repeat right 10px center;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+.model-custom {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.model-row .model-fetch {
+  flex: 0 0 auto;
+  border-color: var(--border);
+  background: var(--panel);
+  white-space: nowrap;
+}
+
+.model-row .model-fetch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* 翻译引擎面板：下拉框只展开当前引擎的配置，避免多个引擎的字段并列堆叠 */
 .engine-panel {
   margin: 2px 0 4px;

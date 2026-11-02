@@ -2,10 +2,11 @@
  * 汉化引擎（翻译层）：
  *   1. ai       —— 调用任意 OpenAI 兼容接口（DeepSeek / Kimi / 通义 / OpenAI…），质量最好，支持 Markdown 结构化翻译
  *   2. zhipu    —— 智谱开放平台 GLM（OpenAI 兼容接口，glm-4.6v-flash 有免费额度）
- *   3. baidu    —— 百度翻译开放平台（需 APP ID + 密钥，按字符计费，支持 auto 识别源语种）
- *   4. youdao   —— 有道智云文本翻译（需应用 ID + 应用密钥，v3 签名，标准版按字符计费）
- *   5. mymemory —— 免费在线接口，无需 API Key，适合翻译仓库简介（有每日额度）
- *   6. offline  —— 离线术语表，翻译标题与常见技术名词
+ *   3. agnes    —— Agnes AI（OpenAI 兼容接口，agnes-2.5-flash / agnes-3.0-pro 等可切换）
+ *   4. baidu    —— 百度翻译开放平台（需 APP ID + 密钥，按字符计费，支持 auto 识别源语种）
+ *   5. youdao   —— 有道智云文本翻译（需应用 ID + 应用密钥，v3 签名，标准版按字符计费）
+ *   6. mymemory —— 免费在线接口，无需 API Key，适合翻译仓库简介（有每日额度）
+ *   7. offline  —— 离线术语表，翻译标题与常见技术名词
  * 所有结果都会落盘缓存，同一个仓库/README 只会翻译一次。
  */
 const crypto = require('crypto');
@@ -750,6 +751,9 @@ class Translator {
     if (p === 'zhipu' && !(s.zhipuApiKey || '').trim()) {
       return { name: 'mymemory', fallbackFrom: 'zhipu', reason: '未填写智谱 API Key，已回退到免费在线翻译' };
     }
+    if (p === 'agnes' && !(s.agnesApiKey || '').trim()) {
+      return { name: 'mymemory', fallbackFrom: 'agnes', reason: '未填写 Agnes API Key，已回退到免费在线翻译' };
+    }
     if (p === 'baidu' && (!(s.baiduAppId || '').trim() || !(s.baiduKey || '').trim())) {
       return { name: 'mymemory', fallbackFrom: 'baidu', reason: '未填写百度翻译 APP ID 或密钥，已回退到免费在线翻译' };
     }
@@ -1020,7 +1024,7 @@ class Translator {
   }
 
   /**
-   * OpenAI 兼容通道的配置：AI 翻译使用用户自定义地址，智谱使用官方固定地址。
+   * OpenAI 兼容通道的配置：AI 翻译使用用户自定义地址，智谱 / Agnes 使用官方地址。
    */
   _chatConfig(provider) {
     const s = this.store.getSettings();
@@ -1033,6 +1037,14 @@ class Translator {
         // glm-4.6v-flash 高峰期经常 429（模型访问量过大），限流时临时改用 glm-4v-flash 兜底
         fallbackModel: model !== 'glm-4v-flash' ? 'glm-4v-flash' : '',
         label: '智谱',
+      };
+    }
+    if (provider === 'agnes') {
+      return {
+        base: (s.agnesBaseUrl || 'https://apihub.agnes-ai.com/v1').replace(/\/+$/, ''),
+        apiKey: (s.agnesApiKey || '').trim(),
+        model: (s.agnesModel || 'agnes-2.5-flash').trim() || 'agnes-2.5-flash',
+        label: 'Agnes',
       };
     }
     return {
@@ -1049,6 +1061,38 @@ class Translator {
 
   async translateBlocksWithZhipu(blocks, sourceLang = 'auto') {
     return this._translateBlocksWithChat(blocks, sourceLang, this._chatConfig('zhipu'));
+  }
+
+  async translateBlocksWithAgnes(blocks, sourceLang = 'auto') {
+    return this._translateBlocksWithChat(blocks, sourceLang, this._chatConfig('agnes'));
+  }
+
+  /**
+   * 拉取同一家服务的可用模型列表（OpenAI 兼容的 GET /models），供设置面板切换模型。
+   * Agnes：GET https://apihub.agnes-ai.com/v1/models
+   */
+  async listModels(provider) {
+    const cfg = this._chatConfig(provider);
+    if (!cfg.apiKey) throw new Error(`请先填写${cfg.label} API Key`);
+    const res = await fetch(`${cfg.base}/models`, {
+      headers: { Authorization: `Bearer ${cfg.apiKey}` },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`${cfg.label}模型列表接口返回 ${res.status}：${body.slice(0, 160)}`);
+    }
+    const data = await res.json();
+    const raw = Array.isArray(data.data)
+      ? data.data
+      : Array.isArray(data.models)
+        ? data.models
+        : [];
+    const ids = raw
+      .map((m) => (typeof m === 'string' ? m : m && (m.id || m.name)))
+      .filter(Boolean)
+      .map((id) => String(id));
+    return Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b));
   }
 
   /** 构造一次 chat/completions 请求体。 */
@@ -1294,6 +1338,9 @@ class Translator {
       } else if (provider.name === 'zhipu') {
         const [out] = await this.translateBlocksWithZhipu([raw], lang.code);
         translated = out;
+      } else if (provider.name === 'agnes') {
+        const [out] = await this.translateBlocksWithAgnes([raw], lang.code);
+        translated = out;
       } else if (provider.name === 'baidu') {
         translated = await this.translateTextWithBaidu(raw, lang.code);
       } else if (provider.name === 'youdao') {
@@ -1392,6 +1439,11 @@ class Translator {
         });
       } else if (provider.name === 'zhipu') {
         const outs = await this.translateBlocksWithZhipu(candidates.map((c) => c.text), lang.code);
+        outs.forEach((t, i) => {
+          if (t) translatedTexts[i] = t;
+        });
+      } else if (provider.name === 'agnes') {
+        const outs = await this.translateBlocksWithAgnes(candidates.map((c) => c.text), lang.code);
         outs.forEach((t, i) => {
           if (t) translatedTexts[i] = t;
         });

@@ -16,7 +16,7 @@ const state = {
   settings: {},
   rate: {},
   theme: 'dark', // dark | light
-  version: '1.2.2',
+  version: '1.2.3',
   update: null, // { ok, current, latest, hasUpdate, downloadUrl, ... }
   view: 'browse', // browse | favorites | likes
   tab: 'top',
@@ -297,6 +297,12 @@ function providerLabel() {
   if (s.translationProvider === 'zhipu' && !s.hasZhipuKey) {
     return '智谱 GLM（未配置 Key，将回退免费翻译）';
   }
+  if (s.translationProvider === 'agnes' && s.hasAgnesKey) {
+    return `Agnes AI（${s.agnesModel || 'agnes-2.5-flash'}）`;
+  }
+  if (s.translationProvider === 'agnes' && !s.hasAgnesKey) {
+    return 'Agnes AI（未配置 Key，将回退免费翻译）';
+  }
   if (s.translationProvider === 'baidu' && s.hasBaiduKey) {
     return '百度翻译';
   }
@@ -423,7 +429,7 @@ async function init() {
   // 以 settings.json 为准（localStorage 只用于首屏快速上色）
   applyTheme(data.settings.theme === 'light' ? 'light' : 'dark');
 
-  state.version = data.version || '1.2.2';
+  state.version = data.version || '1.2.3';
   dom.statusVersion.textContent = state.version;
   el('aboutVersion').textContent = state.version;
   el('countCurated').textContent = state.curated.total;
@@ -561,6 +567,7 @@ function translationConfigured() {
   const s = state.settings || {};
   if (s.translationProvider === 'openai') return Boolean(s.hasOpenaiKey);
   if (s.translationProvider === 'zhipu') return Boolean(s.hasZhipuKey);
+  if (s.translationProvider === 'agnes') return Boolean(s.hasAgnesKey);
   if (s.translationProvider === 'baidu') return Boolean(s.hasBaiduKey);
   if (s.translationProvider === 'youdao') return Boolean(s.hasYoudaoKey);
   if (s.translationProvider === 'off') return true; // 用户主动选了离线术语表，不再提示
@@ -583,12 +590,13 @@ function renderSetupTip() {
     s.translationProvider === 'baidu' ||
     s.translationProvider === 'openai' ||
     s.translationProvider === 'zhipu' ||
+    s.translationProvider === 'agnes' ||
     s.translationProvider === 'youdao';
   dom.setupTip.innerHTML = `
     <div class="setup-tip-text">
       <strong>${freeNow ? '汉化引擎还没填凭据' : '汉化引擎还没配置'}</strong>：
       当前${freeNow ? '会回退到' : '使用'} MyMemory 免费翻译（每天约 5000 词，README 自动汉化只翻前 2500 字符）。
-      配好<strong>百度翻译</strong>、<strong>有道翻译</strong>、<strong>智谱 GLM</strong>或<strong>AI 翻译</strong>后，可整篇、按量计费地自动汉化所有外语仓库。
+      配好<strong>百度翻译</strong>、<strong>有道翻译</strong>、<strong>智谱 GLM</strong>、<strong>Agnes AI</strong>或<strong>AI 翻译</strong>后，可整篇、按量计费地自动汉化所有外语仓库。
     </div>
     <div class="setup-tip-actions">
       <button class="tip-btn primary" data-act="setup-open">去配置（3 步）</button>
@@ -689,6 +697,22 @@ function bindEvents() {
   // 翻译引擎：只显示下拉框选中的那个引擎的配置面板
   el('inputProvider').addEventListener('change', () => {
     syncEnginePanels(el('inputProvider').value);
+  });
+
+  // 拉取模型列表：AI 翻译 / 智谱 / Agnes 都能按 Key 权限读取并切换模型
+  [
+    ['openai', 'btnFetchModels'],
+    ['zhipu', 'btnFetchZhipuModels'],
+    ['agnes', 'btnFetchAgnesModels'],
+  ].forEach(([provider, id]) => {
+    const button = el(id);
+    if (button) button.addEventListener('click', () => fetchModelList(provider, button));
+  });
+
+  // 模型下拉切到「自定义模型…」时，显示下面的手输框
+  Object.keys(MODEL_SELECT_IDS).forEach((provider) => {
+    const select = el(MODEL_SELECT_IDS[provider]);
+    if (select) select.addEventListener('change', () => toggleModelCustom(provider));
   });
 
   let searchTimer = null;
@@ -1492,6 +1516,7 @@ function engineName(result) {
   if (!result) return '翻译引擎';
   if (result.engine === 'openai') return 'AI 翻译';
   if (result.engine === 'zhipu') return '智谱 GLM';
+  if (result.engine === 'agnes') return 'Agnes AI';
   if (result.engine === 'baidu') return '百度翻译';
   if (result.engine === 'youdao') return '有道翻译';
   if (result.engine === 'mymemory') return 'MyMemory 免费翻译';
@@ -1569,7 +1594,7 @@ async function translateReadme({ force = false, auto = false } = {}) {
   // 免费 / 按字符计费的引擎额度紧张：自动模式只翻一部分，手动点击则整篇翻译
   const paid = provider === 'baidu' || provider === 'youdao';
   // AI 类（OpenAI 兼容 / 智谱）没有每日额度，自动模式也整篇翻译
-  const ai = provider === 'openai' || provider === 'zhipu';
+  const ai = provider === 'openai' || provider === 'zhipu' || provider === 'agnes';
   const maxChars = !auto || ai ? undefined : paid ? 5000 : 2500;
   state.readme.loadingTranslation = true;
   renderReadmeNote(
@@ -1587,7 +1612,7 @@ async function translateReadme({ force = false, auto = false } = {}) {
   state.readme.loadingTranslation = false;
   if (res.error) {
     renderReadmeNote(
-      `汉化失败：${esc(res.error)}<br>可以先阅读原文；到「设置」切换为 AI 翻译、智谱 GLM、百度或有道翻译后点「重新汉化」即可。`,
+      `汉化失败：${esc(res.error)}<br>可以先阅读原文；到「设置」切换为 AI 翻译、智谱 GLM、Agnes AI、百度或有道翻译后点「重新汉化」即可。`,
     );
     return;
   }
@@ -1648,6 +1673,91 @@ async function translateDetailDesc() {
 
 /* ---------------- 设置 ---------------- */
 
+/** 同一家服务的常见模型：不联网拉取时也能在模型框下拉里直接切换。 */
+const BUILTIN_MODELS = {
+  openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini', 'deepseek-chat', 'deepseek-reasoner', 'qwen-plus', 'moonshot-v1-8k'],
+  zhipu: ['glm-4.6v-flash', 'glm-4v-flash', 'glm-4-flash', 'glm-4-plus'],
+  agnes: ['agnes-2.5-flash', 'agnes-2.5-pro', 'agnes-2.5-pro-beta', 'agnes-3.0-flash', 'agnes-3.0-pro'],
+};
+
+const MODEL_SELECT_IDS = { openai: 'inputModel', zhipu: 'inputZhipuModel', agnes: 'inputAgnesModel' };
+const MODEL_CUSTOM_IDS = { openai: 'inputModelCustom', zhipu: 'inputZhipuModelCustom', agnes: 'inputAgnesModelCustom' };
+const CUSTOM_MODEL_OPTION = '__custom__';
+
+/** 重建模型下拉：内置模型 + 接口拉取到的模型 + 当前已选项，最后追加「自定义模型…」。 */
+function fillModelSelect(provider, extra = []) {
+  const select = el(MODEL_SELECT_IDS[provider]);
+  if (!select) return;
+  const current = select.value;
+  const existing = [...select.options].map((o) => o.value).filter((v) => v && v !== CUSTOM_MODEL_OPTION);
+  const merged = [...new Set([...(BUILTIN_MODELS[provider] || []), ...extra, ...existing])].filter(Boolean);
+  select.innerHTML =
+    merged.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('') +
+    `<option value="${CUSTOM_MODEL_OPTION}">自定义模型…</option>`;
+  if (current === CUSTOM_MODEL_OPTION) select.value = CUSTOM_MODEL_OPTION;
+  else select.value = merged.includes(current) ? current : merged[0] || CUSTOM_MODEL_OPTION;
+  toggleModelCustom(provider);
+}
+
+/** 选中「自定义模型…」时展开手输框，其它情况收起。 */
+function toggleModelCustom(provider) {
+  const select = el(MODEL_SELECT_IDS[provider]);
+  const custom = el(MODEL_CUSTOM_IDS[provider]);
+  if (!select || !custom) return;
+  const isCustom = select.value === CUSTOM_MODEL_OPTION;
+  custom.hidden = !isCustom;
+  if (!isCustom) custom.value = '';
+}
+
+/** 把已保存的模型写回下拉；不在内置列表里就落到「自定义」并填入手输框。 */
+function setModelSelect(provider, model) {
+  const select = el(MODEL_SELECT_IDS[provider]);
+  const custom = el(MODEL_CUSTOM_IDS[provider]);
+  fillModelSelect(provider);
+  if (!select || !custom) return;
+  const value = String(model || '').trim();
+  if (value && [...select.options].some((o) => o.value === value)) {
+    select.value = value;
+    custom.value = '';
+  } else if (value) {
+    select.value = CUSTOM_MODEL_OPTION;
+    custom.value = value;
+  }
+  toggleModelCustom(provider);
+}
+
+/** 读取当前选择的模型：下拉选中「自定义」时用输入框内容。 */
+function readModelSelect(provider, fallback) {
+  const select = el(MODEL_SELECT_IDS[provider]);
+  const custom = el(MODEL_CUSTOM_IDS[provider]);
+  const value = select && select.value === CUSTOM_MODEL_OPTION
+    ? (custom ? custom.value.trim() : '')
+    : (select ? select.value : '').trim();
+  return value || fallback;
+}
+
+/** 点「拉取模型」：按当前引擎的 Key 读取该服务的可用模型列表。 */
+async function fetchModelList(provider, button) {
+  if (!button) return;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = '拉取中…';
+  try {
+    const res = await api.listModels({ provider });
+    if (res && res.models && res.models.length) {
+      fillModelSelect(provider, res.models);
+      toast(`已拉取 ${res.models.length} 个模型，点模型下拉即可切换`, 'ok');
+    } else {
+      toast((res && res.error) || '没有返回模型列表', 'err');
+    }
+  } catch (err) {
+    toast(err.message || '拉取模型失败', 'err');
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
+}
+
 /**
  * 汉化引擎按需显示：下拉框选中哪个引擎，就只展开该引擎的配置面板。
  */
@@ -1666,10 +1776,13 @@ async function openSettings() {
   el('inputAutoReadme').checked = s.autoTranslateReadme !== false;
   el('inputEmail').value = s.myMemoryEmail || '';
   el('inputBaseUrl').value = s.openaiBaseUrl || '';
-  el('inputModel').value = s.openaiModel || '';
+  setModelSelect('openai', s.openaiModel || 'gpt-4o-mini');
   el('inputApiKey').value = s.openaiApiKey || '';
   el('inputZhipuApiKey').value = s.zhipuApiKey || '';
-  el('inputZhipuModel').value = s.zhipuModel || 'glm-4.6v-flash';
+  setModelSelect('zhipu', s.zhipuModel || 'glm-4.6v-flash');
+  el('inputAgnesBaseUrl').value = s.agnesBaseUrl || 'https://apihub.agnes-ai.com/v1';
+  el('inputAgnesApiKey').value = s.agnesApiKey || '';
+  setModelSelect('agnes', s.agnesModel || 'agnes-2.5-flash');
   el('inputBaiduAppId').value = s.baiduAppId || '';
   el('inputBaiduKey').value = s.baiduKey || '';
   el('inputYoudaoAppKey').value = s.youdaoAppKey || '';
@@ -1692,10 +1805,13 @@ async function saveSettings() {
     autoTranslateReadme: el('inputAutoReadme').checked,
     myMemoryEmail: el('inputEmail').value.trim(),
     openaiBaseUrl: el('inputBaseUrl').value.trim() || 'https://api.openai.com/v1',
-    openaiModel: el('inputModel').value.trim() || 'gpt-4o-mini',
+    openaiModel: readModelSelect('openai', 'gpt-4o-mini'),
     openaiApiKey: el('inputApiKey').value.trim(),
     zhipuApiKey: el('inputZhipuApiKey').value.trim(),
-    zhipuModel: el('inputZhipuModel').value.trim() || 'glm-4.6v-flash',
+    zhipuModel: readModelSelect('zhipu', 'glm-4.6v-flash'),
+    agnesBaseUrl: el('inputAgnesBaseUrl').value.trim() || 'https://apihub.agnes-ai.com/v1',
+    agnesApiKey: el('inputAgnesApiKey').value.trim(),
+    agnesModel: readModelSelect('agnes', 'agnes-2.5-flash'),
     baiduAppId: el('inputBaiduAppId').value.trim(),
     baiduKey: el('inputBaiduKey').value.trim(),
     youdaoAppKey: el('inputYoudaoAppKey').value.trim(),
@@ -1713,6 +1829,7 @@ async function saveSettings() {
     hasGithubToken: Boolean(saved.githubToken),
     hasOpenaiKey: Boolean(saved.openaiApiKey),
     hasZhipuKey: Boolean(saved.zhipuApiKey),
+    hasAgnesKey: Boolean(saved.agnesApiKey),
     hasBaiduKey: Boolean(saved.baiduAppId && saved.baiduKey),
     hasYoudaoKey: Boolean(saved.youdaoAppKey && saved.youdaoAppSecret),
   };

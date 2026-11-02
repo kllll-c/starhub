@@ -7,12 +7,15 @@ const path = require('path');
 
 const DEFAULT_SETTINGS = {
   githubToken: '',
-  translationProvider: 'mymemory', // mymemory | openai | zhipu | baidu | youdao | off
+  translationProvider: 'mymemory', // mymemory | openai | zhipu | agnes | baidu | youdao | off
   openaiBaseUrl: 'https://api.openai.com/v1',
   openaiApiKey: '',
   openaiModel: 'gpt-4o-mini',
   zhipuApiKey: '',
   zhipuModel: 'glm-4.6v-flash',
+  agnesBaseUrl: 'https://apihub.agnes-ai.com/v1',
+  agnesApiKey: '',
+  agnesModel: 'agnes-2.5-flash',
   baiduAppId: '',
   baiduKey: '',
   youdaoAppKey: '',

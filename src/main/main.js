@@ -552,6 +552,9 @@ function createWindow() {
       const outDir = path.join(app.getPath('userData'), 'smoke');
       fs.mkdirSync(outDir, { recursive: true });
       const shot = async (name) => {
+        // 连续截图时 capturePage 可能拿到上一帧（窗口被遮挡 / 尚未重绘），先强制重绘再等一下
+        mainWindow.webContents.invalidate();
+        await wait(400);
         const image = await mainWindow.webContents.capturePage();
         const file = path.join(outDir, name);
         fs.writeFileSync(file, image.toPNG());
@@ -726,15 +729,26 @@ function createWindow() {
         await wait(900);
         await shot('screenshot-settings.png');
         const setDebug = await mainWindow.webContents.executeJavaScript(
-          'JSON.stringify({hint: document.querySelector(".form-hint").textContent.trim().slice(0,80), provider: document.getElementById("inputProvider").value, providers: [...document.getElementById("inputProvider").options].map(o=>o.value), auto: document.getElementById("inputAutoTranslate").checked, autoReadme: document.getElementById("inputAutoReadme").checked, baiduFields: !!(document.getElementById("inputBaiduAppId") && document.getElementById("inputBaiduKey")), youdaoFields: !!(document.getElementById("inputYoudaoAppKey") && document.getElementById("inputYoudaoSecret")), zhipuFields: !!(document.getElementById("inputZhipuApiKey") && document.getElementById("inputZhipuModel")), visibleEngines: [...document.querySelectorAll(".engine-panel")].filter(p=>!p.hidden).map(p=>p.dataset.engine), modalVisible: !document.getElementById("settingsModal").hidden && document.getElementById("settingsModal").offsetHeight > 0, cacheText: document.getElementById("cacheStatsText").textContent})',
+          'JSON.stringify({hint: document.querySelector(".form-hint").textContent.trim().slice(0,80), provider: document.getElementById("inputProvider").value, providers: [...document.getElementById("inputProvider").options].map(o=>o.value), auto: document.getElementById("inputAutoTranslate").checked, autoReadme: document.getElementById("inputAutoReadme").checked, baiduFields: !!(document.getElementById("inputBaiduAppId") && document.getElementById("inputBaiduKey")), youdaoFields: !!(document.getElementById("inputYoudaoAppKey") && document.getElementById("inputYoudaoSecret")), zhipuFields: !!(document.getElementById("inputZhipuApiKey") && document.getElementById("inputZhipuModel")), agnesFields: !!(document.getElementById("inputAgnesApiKey") && document.getElementById("inputAgnesModel") && document.getElementById("inputAgnesBaseUrl")), modelOptions: {openai: document.querySelectorAll("#inputModel option").length, zhipu: document.querySelectorAll("#inputZhipuModel option").length, agnes: document.querySelectorAll("#inputAgnesModel option").length}, visibleEngines: [...document.querySelectorAll(".engine-panel")].filter(p=>!p.hidden).map(p=>p.dataset.engine), modalVisible: !document.getElementById("settingsModal").hidden && document.getElementById("settingsModal").offsetHeight > 0, cacheText: document.getElementById("cacheStatsText").textContent})',
         );
         console.log('[smoke] 设置面板:', setDebug);
         // 切换引擎下拉：只展开选中的引擎面板
         const switchDebug = await mainWindow.webContents.executeJavaScript(
-          '(function(){ var s=document.getElementById("inputProvider"); s.value="zhipu"; s.dispatchEvent(new Event("change")); return JSON.stringify({visible: [...document.querySelectorAll(".engine-panel")].filter(p=>!p.hidden).map(p=>p.dataset.engine), zhipuKey: !!document.getElementById("inputZhipuApiKey").offsetHeight}); })()',
+          '(function(){ var s=document.getElementById("inputProvider"); var out={}; ["zhipu","agnes"].forEach(function(v){ s.value=v; s.dispatchEvent(new Event("change")); out[v]={visible: [...document.querySelectorAll(".engine-panel")].filter(p=>!p.hidden).map(p=>p.dataset.engine), keyField: !!(v === "zhipu" ? document.getElementById("inputZhipuApiKey") : document.getElementById("inputAgnesApiKey")).offsetHeight, model: (v === "zhipu" ? document.getElementById("inputZhipuModel") : document.getElementById("inputAgnesModel")).value}; }); return JSON.stringify(out); })()',
         );
         console.log('[smoke] 引擎面板切换:', switchDebug);
-        await shot('screenshot-settings-zhipu.png');
+        // 分别截图：先切到智谱截一张，再切到 Agnes 截一张
+        for (const provider of ['zhipu', 'agnes']) {
+          await mainWindow.webContents.executeJavaScript(
+            `(function(){ var s=document.getElementById("inputProvider"); s.value="${provider}"; s.dispatchEvent(new Event("change")); return true; })()`,
+          );
+          await shot(`screenshot-settings-${provider}.png`);
+        }
+        // 模型下拉：切到同家另一个模型 → 再切「自定义模型…」应展开手输框
+        const modelDebug = await mainWindow.webContents.executeJavaScript(
+          '(function(){ var s=document.getElementById("inputAgnesModel"), c=document.getElementById("inputAgnesModelCustom"); var opts=[...s.options].map(o=>o.value); s.value="agnes-3.0-pro"; s.dispatchEvent(new Event("change")); var picked=s.value; s.value="__custom__"; s.dispatchEvent(new Event("change")); var shown=!c.hidden && c.offsetHeight>0; s.value="agnes-2.5-flash"; s.dispatchEvent(new Event("change")); return JSON.stringify({options:opts, picked:picked, customShown:shown, customCleared:c.value==="" && c.hidden}); })()',
+        );
+        console.log('[smoke] 模型切换:', modelDebug);
         await mainWindow.webContents.executeJavaScript('document.getElementById("btnCloseSettings").click(); true');
         await wait(600);
       });
@@ -863,6 +877,8 @@ function registerIpc() {
         openaiApiKey: '',
         hasZhipuKey: Boolean(settings.zhipuApiKey),
         zhipuApiKey: '',
+        hasAgnesKey: Boolean(settings.agnesApiKey),
+        agnesApiKey: '',
         hasBaiduKey: Boolean(settings.baiduAppId && settings.baiduKey),
         baiduKey: '',
         hasYoudaoKey: Boolean(settings.youdaoAppKey && settings.youdaoAppSecret),
@@ -1001,6 +1017,7 @@ function registerIpc() {
     if (incoming.githubToken && incoming.githubToken.includes('•')) delete incoming.githubToken;
     if (incoming.openaiApiKey && incoming.openaiApiKey.includes('•')) delete incoming.openaiApiKey;
     if (incoming.zhipuApiKey && incoming.zhipuApiKey.includes('•')) delete incoming.zhipuApiKey;
+    if (incoming.agnesApiKey && incoming.agnesApiKey.includes('•')) delete incoming.agnesApiKey;
     if (incoming.baiduKey && incoming.baiduKey.includes('•')) delete incoming.baiduKey;
     if (incoming.youdaoAppSecret && incoming.youdaoAppSecret.includes('•')) delete incoming.youdaoAppSecret;
     const saved = store.saveSettings(incoming);
@@ -1016,12 +1033,26 @@ function registerIpc() {
     checkUpdate({ force, mockLatest }),
   );
 
+  // 拉取模型列表（OpenAI 兼容的 GET /models）：设置面板里切换同一家的不同大模型
+  ipcMain.handle('translate:list-models', async (_event, { provider } = {}) => {
+    if (!['openai', 'zhipu', 'agnes'].includes(provider)) {
+      return { models: [], error: '该引擎不支持拉取模型列表' };
+    }
+    try {
+      const models = await translator.listModels(provider);
+      return { models };
+    } catch (err) {
+      return { models: [], error: err.message };
+    }
+  });
+
   ipcMain.handle('translate:status', () => {
     const s = store.getSettings();
     return {
       provider: s.translationProvider,
       hasOpenaiKey: Boolean(s.openaiApiKey),
       hasZhipuKey: Boolean(s.zhipuApiKey),
+      hasAgnesKey: Boolean(s.agnesApiKey),
       hasBaiduKey: Boolean(s.baiduAppId && s.baiduKey),
       hasYoudaoKey: Boolean(s.youdaoAppKey && s.youdaoAppSecret),
       model: s.openaiModel,
