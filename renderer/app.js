@@ -16,7 +16,7 @@ const state = {
   settings: {},
   rate: {},
   theme: 'dark', // dark | light
-  version: '1.2.1',
+  version: '1.2.2',
   update: null, // { ok, current, latest, hasUpdate, downloadUrl, ... }
   view: 'browse', // browse | favorites | likes
   tab: 'top',
@@ -292,7 +292,7 @@ function providerLabel() {
     return 'AI 翻译（未配置 Key，将回退免费翻译）';
   }
   if (s.translationProvider === 'zhipu' && s.hasZhipuKey) {
-    return `智谱 GLM（${s.zhipuModel || 'glm-4-flash'}）`;
+    return `智谱 GLM（${s.zhipuModel || 'glm-4.6v-flash'}）`;
   }
   if (s.translationProvider === 'zhipu' && !s.hasZhipuKey) {
     return '智谱 GLM（未配置 Key，将回退免费翻译）';
@@ -423,7 +423,7 @@ async function init() {
   // 以 settings.json 为准（localStorage 只用于首屏快速上色）
   applyTheme(data.settings.theme === 'light' ? 'light' : 'dark');
 
-  state.version = data.version || '1.2.1';
+  state.version = data.version || '1.2.2';
   dom.statusVersion.textContent = state.version;
   el('aboutVersion').textContent = state.version;
   el('countCurated').textContent = state.curated.total;
@@ -1669,7 +1669,7 @@ async function openSettings() {
   el('inputModel').value = s.openaiModel || '';
   el('inputApiKey').value = s.openaiApiKey || '';
   el('inputZhipuApiKey').value = s.zhipuApiKey || '';
-  el('inputZhipuModel').value = s.zhipuModel || 'glm-4-flash';
+  el('inputZhipuModel').value = s.zhipuModel || 'glm-4.6v-flash';
   el('inputBaiduAppId').value = s.baiduAppId || '';
   el('inputBaiduKey').value = s.baiduKey || '';
   el('inputYoudaoAppKey').value = s.youdaoAppKey || '';
@@ -1695,7 +1695,7 @@ async function saveSettings() {
     openaiModel: el('inputModel').value.trim() || 'gpt-4o-mini',
     openaiApiKey: el('inputApiKey').value.trim(),
     zhipuApiKey: el('inputZhipuApiKey').value.trim(),
-    zhipuModel: el('inputZhipuModel').value.trim() || 'glm-4-flash',
+    zhipuModel: el('inputZhipuModel').value.trim() || 'glm-4.6v-flash',
     baiduAppId: el('inputBaiduAppId').value.trim(),
     baiduKey: el('inputBaiduKey').value.trim(),
     youdaoAppKey: el('inputYoudaoAppKey').value.trim(),

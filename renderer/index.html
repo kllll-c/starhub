@@ -204,7 +204,7 @@
         <div class="status-right">
           <span id="statusCache"></span>
           <span class="sep">·</span>
-          <span>StarHub v<span id="statusVersion">1.2.1</span></span>
+          <span>StarHub v<span id="statusVersion">1.2.2</span></span>
         </div>
       </footer>
     </div>
@@ -238,7 +238,7 @@
               <select id="inputProvider">
                 <option value="mymemory">MyMemory 免费在线翻译（无需 Key，有每日额度）</option>
                 <option value="openai">AI 翻译（OpenAI 兼容接口，质量最好）</option>
-                <option value="zhipu">智谱 GLM（OpenAI 兼容，glm-4-flash 有免费额度）</option>
+                <option value="zhipu">智谱 GLM（OpenAI 兼容，glm-4.6v-flash 有免费额度）</option>
                 <option value="baidu">百度翻译（需 APP ID + 密钥，按字符计费）</option>
                 <option value="youdao">有道翻译（需应用 ID + 应用密钥，按字符计费）</option>
                 <option value="off">仅离线术语表（不联网，只汉化标题）</option>
@@ -291,12 +291,12 @@
               </label>
               <label class="field">
                 <span>模型</span>
-                <input id="inputZhipuModel" type="text" placeholder="glm-4-flash" />
+                <input id="inputZhipuModel" type="text" placeholder="glm-4.6v-flash" />
               </label>
               <p class="form-hint">
                 接口地址已内置（https://open.bigmodel.cn/api/paas/v4），使用 OpenAI 兼容的 chat/completions 协议。
                 在智谱开放平台「API Keys」页面（<a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" rel="noreferrer">open.bigmodel.cn</a>）创建 Key；
-                默认模型 glm-4-flash 有免费额度，可换成 glm-4-plus 等更高阶模型。
+                默认模型 glm-4.6v-flash 有免费额度，也可换成 glm-4-plus 等更高阶模型；该免费模型高峰期可能限流，程序会自动重试，仍限流时改用 glm-4v-flash 兜底。
               </p>
             </div>
 
@@ -363,7 +363,7 @@
         </div>
         <div class="modal-body">
           <div class="about-version">
-            <span>当前版本 v<span id="aboutVersion">1.2.1</span></span>
+            <span>当前版本 v<span id="aboutVersion">1.2.2</span></span>
             <button class="tip-btn ghost" id="btnCheckUpdate">检查更新</button>
             <span class="about-update" id="aboutUpdateText"></span>
           </div>

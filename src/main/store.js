@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS = {
   openaiApiKey: '',
   openaiModel: 'gpt-4o-mini',
   zhipuApiKey: '',
-  zhipuModel: 'glm-4-flash',
+  zhipuModel: 'glm-4.6v-flash',
   baiduAppId: '',
   baiduKey: '',
   youdaoAppKey: '',
@@ -50,6 +50,11 @@ class Store {
     this.settingsFile = path.join(baseDir, 'settings.json');
     this.libraryFile = path.join(baseDir, 'library.json');
     this.settings = { ...DEFAULT_SETTINGS, ...readJson(this.settingsFile, {}) };
+    // 旧版本默认的 glm-4-flash 升级为新的默认模型；用户手动改成其它模型名时保留原值
+    if (this.settings.zhipuModel === 'glm-4-flash') {
+      this.settings.zhipuModel = DEFAULT_SETTINGS.zhipuModel;
+      writeJson(this.settingsFile, this.settings);
+    }
     const lib = readJson(this.libraryFile, { favorites: [], likes: [] });
     this.library = {
       favorites: Array.isArray(lib.favorites) ? lib.favorites : [],

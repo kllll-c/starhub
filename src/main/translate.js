@@ -1,7 +1,7 @@
 /**
  * 汉化引擎（翻译层）：
  *   1. ai       —— 调用任意 OpenAI 兼容接口（DeepSeek / Kimi / 通义 / OpenAI…），质量最好，支持 Markdown 结构化翻译
- *   2. zhipu    —— 智谱开放平台 GLM（OpenAI 兼容接口，glm-4-flash 有免费额度）
+ *   2. zhipu    —— 智谱开放平台 GLM（OpenAI 兼容接口，glm-4.6v-flash 有免费额度）
  *   3. baidu    —— 百度翻译开放平台（需 APP ID + 密钥，按字符计费，支持 auto 识别源语种）
  *   4. youdao   —— 有道智云文本翻译（需应用 ID + 应用密钥，v3 签名，标准版按字符计费）
  *   5. mymemory —— 免费在线接口，无需 API Key，适合翻译仓库简介（有每日额度）
@@ -1025,10 +1025,13 @@ class Translator {
   _chatConfig(provider) {
     const s = this.store.getSettings();
     if (provider === 'zhipu') {
+      const model = (s.zhipuModel || 'glm-4.6v-flash').trim() || 'glm-4.6v-flash';
       return {
         base: 'https://open.bigmodel.cn/api/paas/v4',
         apiKey: (s.zhipuApiKey || '').trim(),
-        model: (s.zhipuModel || 'glm-4-flash').trim() || 'glm-4-flash',
+        model,
+        // glm-4.6v-flash 高峰期经常 429（模型访问量过大），限流时临时改用 glm-4v-flash 兜底
+        fallbackModel: model !== 'glm-4v-flash' ? 'glm-4v-flash' : '',
         label: '智谱',
       };
     }
@@ -1049,9 +1052,9 @@ class Translator {
   }
 
   /** 构造一次 chat/completions 请求体。 */
-  _chatPayload(texts, cfg, sourceLabel) {
+  _chatPayload(texts, cfg, sourceLabel, modelName) {
     return {
-      model: cfg.model,
+      model: modelName || cfg.model,
       temperature: 0.2,
       messages: [
         {
@@ -1088,14 +1091,14 @@ class Translator {
   }
 
   /** 发一次请求，网络错误与 HTTP 错误都带上可重试标记。 */
-  async _chatOnce(texts, cfg, sourceLabel) {
+  async _chatOnce(texts, cfg, sourceLabel, modelName) {
     const res = await fetch(`${cfg.base}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${cfg.apiKey}`,
       },
-      body: JSON.stringify(this._chatPayload(texts, cfg, sourceLabel)),
+      body: JSON.stringify(this._chatPayload(texts, cfg, sourceLabel, modelName)),
       signal: AbortSignal.timeout(90000),
     });
     if (!res.ok) {
@@ -1114,30 +1117,44 @@ class Translator {
     return items;
   }
 
+  /** 429 / 5xx / 网络超时视为可重试；401、余额不足、格式错误等直接失败。 */
+  _isRetryableError(err) {
+    const status = Number(err && err.status);
+    return Boolean(
+      status === 429 ||
+        (status >= 500 && status <= 599) ||
+        /fetch failed|network|timeout|timed out|abort|ECONN|ETIMEDOUT|EAI_AGAIN|socket hang up|格式无法解析/i.test(
+          (err && err.message) || '',
+        ),
+    );
+  }
+
   /**
    * 带退避重试的请求：429 / 5xx / 网络超时可以重试，
    * 其余（签名错误、余额不足、格式错误）直接抛出，避免白等。
+   * 智谱主模型重试后仍失败时，再换 fallbackModel（glm-4v-flash）试一次。
    */
   async _chatWithRetry(texts, cfg, sourceLabel) {
+    const models = [cfg.model];
+    if (cfg.fallbackModel && cfg.fallbackModel !== cfg.model) models.push(cfg.fallbackModel);
     let lastError = null;
-    for (let attempt = 1; attempt <= CHAT_MAX_ATTEMPTS; attempt += 1) {
-      try {
-        return await this._chatOnce(texts, cfg, sourceLabel);
-      } catch (err) {
-        lastError = err;
-        const status = Number(err.status);
-        const retryable =
-          status === 429 ||
-          (status >= 500 && status <= 599) ||
-          /fetch failed|network|timeout|timed out|abort|ECONN|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(
-            err.message || '',
-          );
-        if (!retryable || attempt === CHAT_MAX_ATTEMPTS) break;
-        const retryAfter = Number(err.retryAfter);
-        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
-          ? Math.min(retryAfter * 1000, 10000)
-          : 1200 * attempt;
-        await new Promise((r) => setTimeout(r, waitMs));
+    for (const model of models) {
+      const attempts = model === cfg.model ? CHAT_MAX_ATTEMPTS : 1;
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          return await this._chatOnce(texts, cfg, sourceLabel, model);
+        } catch (err) {
+          lastError = err;
+        }
+        // 非限流类错误（401 / 余额不足 / 模型无权访问）换模型也没用，直接抛出
+        if (!this._isRetryableError(lastError)) throw lastError;
+        if (attempt < attempts) {
+          const retryAfter = Number(lastError.retryAfter);
+          const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+            ? Math.min(retryAfter * 1000, 10000)
+            : 1200 * attempt;
+          await new Promise((r) => setTimeout(r, waitMs));
+        }
       }
     }
     throw lastError;
@@ -1230,6 +1247,8 @@ class Translator {
     // 并发失败的批次再串行补一次；仍然失败就把错误抛给上层（会退回离线术语表）
     for (const { batch, err } of failures) {
       if (!hasMissing(batch)) continue;
+      // 401 / 余额不足等确定性错误，串行重试也没用，直接抛出
+      if (!this._isRetryableError(err)) throw err;
       try {
         await translateBatch(batch);
       } catch (_) {
