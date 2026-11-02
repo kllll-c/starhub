@@ -1,0 +1,872 @@
+{
+  "updatedAt": "2025-10",
+  "note": "内置精选库：中文名与中文简介为人工整理，Star 数为离线快照；联网后以 GitHub 实时数据为准。",
+  "items": [
+    {
+      "full_name": "huggingface/transformers",
+      "stars": 152000,
+      "language": "Python",
+      "category": "ai",
+      "name_zh": "模型全家桶",
+      "desc_zh": "预训练模型库之王：文本、视觉、音频三大领域上千个模型，几行代码即可加载、微调与推理。",
+      "tags": ["深度学习", "预训练模型", "NLP"]
+    },
+    {
+      "full_name": "ollama/ollama",
+      "stars": 165000,
+      "language": "Go",
+      "category": "ai",
+      "desc_zh": "一条命令在本地跑 Llama、Qwen、DeepSeek 等大模型，自动管理模型下载、量化与推理接口。",
+      "tags": ["本地部署", "大模型", "一键运行"]
+    },
+    {
+      "full_name": "ggml-org/llama.cpp",
+      "stars": 88000,
+      "language": "C++",
+      "category": "ai",
+      "desc_zh": "纯 C/C++ 实现的大模型推理引擎，量化后在普通笔记本甚至手机上也能流畅运行。",
+      "tags": ["推理引擎", "量化", "CPU 友好"]
+    },
+    {
+      "full_name": "comfyanonymous/ComfyUI",
+      "stars": 90000,
+      "language": "Python",
+      "category": "ai",
+      "desc_zh": "节点式 AI 绘图工作流，支持 SD、Flux 等模型，自定义节点插件生态极其丰富。",
+      "tags": ["AI 绘图", "工作流", "节点式"]
+    },
+    {
+      "full_name": "AUTOMATIC1111/stable-diffusion-webui",
+      "stars": 158000,
+      "language": "Python",
+      "category": "ai",
+      "desc_zh": "最经典的 Stable Diffusion 网页界面，功能齐全、插件众多，是本地 AI 出图的首选工具。",
+      "tags": ["Stable Diffusion", "AI 绘图", "WebUI"]
+    },
+    {
+      "full_name": "langchain-ai/langchain",
+      "stars": 118000,
+      "language": "Python",
+      "category": "ai",
+      "desc_zh": "构建大模型应用的框架：链式调用、检索增强（RAG）、智能体与工具调用一应俱全。",
+      "tags": ["LLM 应用", "RAG", "智能体"]
+    },
+    {
+      "full_name": "open-webui/open-webui",
+      "stars": 110000,
+      "language": "JavaScript",
+      "category": "ai",
+      "desc_zh": "可自托管的 ChatGPT 风格界面，能接入 Ollama 与 OpenAI，支持知识库、多用户与权限管理。",
+      "tags": ["对话界面", "自托管", "知识库"]
+    },
+    {
+      "full_name": "vllm-project/vllm",
+      "stars": 62000,
+      "language": "Python",
+      "category": "ai",
+      "desc_zh": "高吞吐的大模型推理与服务引擎，PagedAttention 让并发性能大幅提升，生产部署常用。",
+      "tags": ["推理服务", "高并发", "生产可用"]
+    },
+    {
+      "full_name": "karpathy/nanoGPT",
+      "stars": 50000,
+      "language": "Python",
+      "category": "ai",
+      "desc_zh": "用极简代码复现 GPT 的训练全流程，理解大模型原理的最佳入门项目。",
+      "tags": ["教学", "GPT", "从零实现"]
+    },
+    {
+      "full_name": "All-Hands-AI/OpenHands",
+      "stars": 68000,
+      "language": "Python",
+      "category": "ai",
+      "desc_zh": "开源 AI 软件工程师，能自主读写代码、运行测试并修复缺陷，接近自主编码智能体。",
+      "tags": ["AI 智能体", "自动编码", "开源"]
+    },
+    {
+      "full_name": "facebook/react",
+      "stars": 240000,
+      "language": "JavaScript",
+      "category": "web",
+      "desc_zh": "声明式、组件化的 UI 库，整个现代前端生态的基石，生态与招聘需求都最庞大。",
+      "tags": ["UI 库", "组件化", "生态之王"]
+    },
+    {
+      "full_name": "vuejs/core",
+      "stars": 52000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "Vue 3 的核心实现，渐进式框架 + 组合式 API，中文文档友好，上手非常快。",
+      "tags": ["渐进式框架", "组合式 API", "易上手"]
+    },
+    {
+      "full_name": "angular/angular",
+      "stars": 99000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "Google 维护的企业级前端框架，依赖注入、路由、表单、RxJS 一整套方案齐全。",
+      "tags": ["企业级", "TypeScript", "全家桶"]
+    },
+    {
+      "full_name": "sveltejs/svelte",
+      "stars": 84000,
+      "language": "JavaScript",
+      "category": "web",
+      "desc_zh": "编译时框架，把组件直接编译成高效原生 JS，没有虚拟 DOM，打包体积小。",
+      "tags": ["编译时", "无虚拟 DOM", "轻量"]
+    },
+    {
+      "full_name": "vercel/next.js",
+      "stars": 138000,
+      "language": "JavaScript",
+      "category": "web",
+      "desc_zh": "React 全栈框架，支持 SSR、SSG、Server Actions 与图片优化，一条命令即可上线。",
+      "tags": ["React 全栈", "SSR", "Vercel"]
+    },
+    {
+      "full_name": "nuxt/nuxt",
+      "stars": 58000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "Vue 的全栈框架，约定式路由、服务端渲染与自动导入，Nuxt 3 兼顾开发体验与性能。",
+      "tags": ["Vue 全栈", "服务端渲染", "自动导入"]
+    },
+    {
+      "full_name": "withastro/astro",
+      "stars": 54000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "内容优先的站点框架，默认零 JS，可混用 React、Vue、Svelte 组件，博客与文档站首选。",
+      "tags": ["静态站点", "零 JS", "多框架混用"]
+    },
+    {
+      "full_name": "tailwindlabs/tailwindcss",
+      "stars": 88000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "原子化 CSS 框架，直接用类名描述样式，配合设计令牌可快速构建统一风格的界面。",
+      "tags": ["CSS 框架", "原子化", "设计系统"]
+    },
+    {
+      "full_name": "shadcn-ui/ui",
+      "stars": 90000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "复制即用的 React 组件集合，代码直接进你的项目，配合 Tailwind 高度可定制。",
+      "tags": ["React 组件", "可定制", "Tailwind"]
+    },
+    {
+      "full_name": "vitejs/vite",
+      "stars": 74000,
+      "language": "TypeScript",
+      "category": "web",
+      "desc_zh": "下一代前端构建工具，基于 ESM 的秒级冷启动与热更新，几乎所有新框架都默认支持。",
+      "tags": ["构建工具", "热更新", "极速"]
+    },
+    {
+      "full_name": "fastapi/fastapi",
+      "stars": 92000,
+      "language": "Python",
+      "category": "backend",
+      "desc_zh": "高性能 Python Web 框架，基于类型注解自动生成 OpenAPI 文档，异步写起来很舒服。",
+      "tags": ["Python", "异步", "自动文档"]
+    },
+    {
+      "full_name": "django/django",
+      "stars": 87000,
+      "language": "Python",
+      "category": "backend",
+      "desc_zh": "全家桶式 Python Web 框架，自带 ORM、后台管理与认证，适合快速交付完整业务系统。",
+      "tags": ["Python", "ORM", "后台管理"]
+    },
+    {
+      "full_name": "spring-projects/spring-boot",
+      "stars": 79000,
+      "language": "Java",
+      "category": "backend",
+      "desc_zh": "Java 微服务首选框架，自动配置 + 丰富 Starter，企业级应用落地最稳的方案。",
+      "tags": ["Java", "微服务", "企业级"]
+    },
+    {
+      "full_name": "gin-gonic/gin",
+      "stars": 85000,
+      "language": "Go",
+      "category": "backend",
+      "desc_zh": "轻量高性能的 Go Web 框架，路由分组与中间件简洁高效，Go 服务端入门必学。",
+      "tags": ["Go", "高性能", "中间件"]
+    },
+    {
+      "full_name": "nestjs/nest",
+      "stars": 72000,
+      "language": "TypeScript",
+      "category": "backend",
+      "desc_zh": "渐进式 Node.js 框架，TypeScript + 依赖注入 + 模块化架构，工程化程度很高。",
+      "tags": ["Node.js", "TypeScript", "依赖注入"]
+    },
+    {
+      "full_name": "expressjs/express",
+      "stars": 67000,
+      "language": "JavaScript",
+      "category": "backend",
+      "desc_zh": "极简的 Node.js HTTP 框架，中间件模型影响了一整代 Web 框架，生态插件极多。",
+      "tags": ["Node.js", "极简", "中间件"]
+    },
+    {
+      "full_name": "laravel/laravel",
+      "stars": 82000,
+      "language": "PHP",
+      "category": "backend",
+      "desc_zh": "PHP 全栈框架，语法优雅、生态完善，自带队列、缓存、认证与模板引擎。",
+      "tags": ["PHP", "全栈", "生态完善"]
+    },
+    {
+      "full_name": "rails/rails",
+      "stars": 58000,
+      "language": "Ruby",
+      "category": "backend",
+      "desc_zh": "Ruby on Rails，约定优于配置的经典全栈框架，几分钟就能搭出可用的业务原型。",
+      "tags": ["Ruby", "约定优于配置", "全栈"]
+    },
+    {
+      "full_name": "gofiber/fiber",
+      "stars": 37000,
+      "language": "Go",
+      "category": "backend",
+      "desc_zh": "受 Express 启发的 Go Web 框架，API 友好、性能极高，迁移 Node 习惯成本低。",
+      "tags": ["Go", "Express 风格", "高性能"]
+    },
+    {
+      "full_name": "actix/actix-web",
+      "stars": 23000,
+      "language": "Rust",
+      "category": "backend",
+      "desc_zh": "Rust 高性能 Web 框架，类型安全、零成本抽象，适合追求极致性能与内存安全的服务。",
+      "tags": ["Rust", "高性能", "类型安全"]
+    },
+    {
+      "full_name": "flutter/flutter",
+      "stars": 172000,
+      "language": "Dart",
+      "category": "mobile",
+      "desc_zh": "Google 跨平台 UI 工具包，一套 Dart 代码构建 Android、iOS、桌面与 Web 界面。",
+      "tags": ["跨平台", "Dart", "自绘引擎"]
+    },
+    {
+      "full_name": "facebook/react-native",
+      "stars": 126000,
+      "language": "JavaScript",
+      "category": "mobile",
+      "desc_zh": "用 React 写原生移动应用，共享逻辑与组件，同时保留原生渲染性能。",
+      "tags": ["跨平台", "React", "原生渲染"]
+    },
+    {
+      "full_name": "expo/expo",
+      "stars": 42000,
+      "language": "TypeScript",
+      "category": "mobile",
+      "desc_zh": "React Native 的开发与构建平台，云端打包、OTA 热更新，移动端开发体验大幅提升。",
+      "tags": ["React Native", "云打包", "热更新"]
+    },
+    {
+      "full_name": "ionic-team/ionic-framework",
+      "stars": 51000,
+      "language": "TypeScript",
+      "category": "mobile",
+      "desc_zh": "用 Web 技术构建混合移动应用，组件库贴合原生外观，可搭配 Angular、React、Vue。",
+      "tags": ["混合应用", "Web 技术", "组件库"]
+    },
+    {
+      "full_name": "JetBrains/compose-multiplatform",
+      "stars": 18000,
+      "language": "Kotlin",
+      "category": "mobile",
+      "desc_zh": "Kotlin 声明式 UI，一套代码覆盖 Android、iOS 与桌面端，JetBrains 官方出品。",
+      "tags": ["Kotlin", "声明式 UI", "跨端"]
+    },
+    {
+      "full_name": "android/nowinandroid",
+      "stars": 20000,
+      "language": "Kotlin",
+      "category": "mobile",
+      "desc_zh": "Google 官方现代 Android 开发示范项目，展示 Compose、模块化与离线优先的最佳实践。",
+      "tags": ["Android", "Compose", "官方示例"]
+    },
+    {
+      "full_name": "Alamofire/Alamofire",
+      "stars": 42000,
+      "language": "Swift",
+      "category": "mobile",
+      "desc_zh": "Swift 网络请求库，链式调用、上传下载与证书校验都封装好，iOS/macOS 开发必备。",
+      "tags": ["Swift", "网络请求", "iOS"]
+    },
+    {
+      "full_name": "android/architecture-samples",
+      "stars": 45000,
+      "language": "Kotlin",
+      "category": "mobile",
+      "desc_zh": "Google 官方 Android 架构示例集合，对比 MVP、MVVM 与 Compose 的工程化写法。",
+      "tags": ["Android", "架构示例", "官方"]
+    },
+    {
+      "full_name": "electron/electron",
+      "stars": 118000,
+      "language": "C++",
+      "category": "desktop",
+      "desc_zh": "用 Web 技术构建跨平台桌面应用，VS Code、Slack、Discord 都在用，生态极其成熟。",
+      "tags": ["桌面应用", "Web 技术", "跨平台"]
+    },
+    {
+      "full_name": "tauri-apps/tauri",
+      "stars": 92000,
+      "language": "Rust",
+      "category": "desktop",
+      "desc_zh": "超轻量的桌面应用框架，Rust 后端 + 系统 WebView，安装包体积远小于 Electron。",
+      "tags": ["Rust", "轻量", "跨平台"]
+    },
+    {
+      "full_name": "microsoft/vscode",
+      "stars": 172000,
+      "language": "TypeScript",
+      "category": "desktop",
+      "desc_zh": "最流行的开源代码编辑器，插件市场庞大，内置 Git、调试、终端与远程开发能力。",
+      "tags": ["代码编辑器", "插件生态", "远程开发"]
+    },
+    {
+      "full_name": "microsoft/terminal",
+      "stars": 100000,
+      "language": "C++",
+      "category": "desktop",
+      "desc_zh": "Windows 官方终端，多标签、GPU 渲染与自定义配色，取代传统 cmd 的效率工具。",
+      "tags": ["Windows", "终端", "多标签"]
+    },
+    {
+      "full_name": "AppFlowy-IO/AppFlowy",
+      "stars": 62000,
+      "language": "Dart",
+      "category": "desktop",
+      "desc_zh": "开源的 Notion 替代品，支持看板、数据库与多人协作，数据完全掌握在自己手里。",
+      "tags": ["笔记", "Notion 替代", "自托管"]
+    },
+    {
+      "full_name": "localsend/localsend",
+      "stars": 60000,
+      "language": "Dart",
+      "category": "desktop",
+      "desc_zh": "跨平台局域网文件互传，接近 AirDrop 的体验，无需联网、无需注册账号。",
+      "tags": ["文件传输", "局域网", "跨平台"]
+    },
+    {
+      "full_name": "notepad-plus-plus/notepad-plus-plus",
+      "stars": 25000,
+      "language": "C++",
+      "category": "desktop",
+      "desc_zh": "Windows 上最经典的免费文本编辑器，语法高亮、宏与插件，处理大文件也很稳。",
+      "tags": ["文本编辑器", "Windows", "免费"]
+    },
+    {
+      "full_name": "hoppscotch/hoppscotch",
+      "stars": 66000,
+      "language": "TypeScript",
+      "category": "desktop",
+      "desc_zh": "开源 API 调试工具，Postman 的轻量替代，支持 REST、GraphQL、SSE 与团队协作。",
+      "tags": ["API 调试", "Postman 替代", "开源"]
+    },
+    {
+      "full_name": "ohmyzsh/ohmyzsh",
+      "stars": 178000,
+      "language": "Shell",
+      "category": "devtools",
+      "desc_zh": "Zsh 配置框架，开箱即用的主题与数百个插件，让终端更好看也更好用。",
+      "tags": ["Shell", "主题", "插件"]
+    },
+    {
+      "full_name": "junegunn/fzf",
+      "stars": 70000,
+      "language": "Go",
+      "category": "devtools",
+      "desc_zh": "命令行模糊查找工具，可接入文件、历史命令、Git 分支等任意列表，效率翻倍。",
+      "tags": ["模糊查找", "命令行", "通用"]
+    },
+    {
+      "full_name": "BurntSushi/ripgrep",
+      "stars": 56000,
+      "language": "Rust",
+      "category": "devtools",
+      "desc_zh": "极速全文搜索工具，自动尊重 .gitignore，单个仓库内搜索代码几乎瞬间完成。",
+      "tags": ["全文搜索", "极速", "Rust"]
+    },
+    {
+      "full_name": "sharkdp/bat",
+      "stars": 53000,
+      "language": "Rust",
+      "category": "devtools",
+      "desc_zh": "带语法高亮与 Git 变更标记的 cat 替代品，查看代码和日志更直观。",
+      "tags": ["语法高亮", "cat 替代", "命令行"]
+    },
+    {
+      "full_name": "starship/starship",
+      "stars": 49000,
+      "language": "Rust",
+      "category": "devtools",
+      "desc_zh": "跨 Shell 的极简命令提示符，自动显示 Git 分支、语言版本与耗时，配置简单。",
+      "tags": ["提示符", "跨 Shell", "极简"]
+    },
+    {
+      "full_name": "git/git",
+      "stars": 57000,
+      "language": "C",
+      "category": "devtools",
+      "desc_zh": "Git 本体源码，分布式版本控制的事实标准，想深入理解版本控制可以直接读实现。",
+      "tags": ["版本控制", "源码", "必备"]
+    },
+    {
+      "full_name": "cli/cli",
+      "stars": 41000,
+      "language": "Go",
+      "category": "devtools",
+      "desc_zh": "GitHub 官方命令行工具，在终端里管理仓库、Issue、PR、Release 与 Actions。",
+      "tags": ["GitHub CLI", "官方", "终端"]
+    },
+    {
+      "full_name": "tmux/tmux",
+      "stars": 39000,
+      "language": "C",
+      "category": "devtools",
+      "desc_zh": "终端复用器，一个窗口分屏管理多个会话，远程开发与长时间任务必备。",
+      "tags": ["终端复用", "分屏", "会话"]
+    },
+    {
+      "full_name": "microsoft/PowerToys",
+      "stars": 118000,
+      "language": "C#",
+      "category": "devtools",
+      "desc_zh": "微软官方 Windows 增强工具集：窗口布局、快速启动、颜色拾取、批量重命名等。",
+      "tags": ["Windows 增强", "效率工具", "官方"]
+    },
+    {
+      "full_name": "kubernetes/kubernetes",
+      "stars": 118000,
+      "language": "Go",
+      "category": "devops",
+      "desc_zh": "容器编排的事实标准，提供集群调度、自动扩缩、滚动发布与自愈能力。",
+      "tags": ["容器编排", "云原生", "集群"]
+    },
+    {
+      "full_name": "moby/moby",
+      "stars": 71000,
+      "language": "Go",
+      "category": "devops",
+      "desc_zh": "Docker 引擎的开源实现，容器运行时核心，镜像构建与容器管理都基于它。",
+      "tags": ["Docker", "容器引擎", "镜像"]
+    },
+    {
+      "full_name": "grafana/grafana",
+      "stars": 70000,
+      "language": "TypeScript",
+      "category": "devops",
+      "desc_zh": "可视化监控面板，对接 Prometheus、Elasticsearch、MySQL 等数据源，拖拽即可出图。",
+      "tags": ["监控面板", "可视化", "可观测性"]
+    },
+    {
+      "full_name": "prometheus/prometheus",
+      "stars": 59000,
+      "language": "Go",
+      "category": "devops",
+      "desc_zh": "时序监控与告警系统，拉取式采集 + PromQL 查询，是云原生监控体系的基石。",
+      "tags": ["监控", "时序数据库", "PromQL"]
+    },
+    {
+      "full_name": "traefik/traefik",
+      "stars": 55000,
+      "language": "Go",
+      "category": "devops",
+      "desc_zh": "云原生反向代理与网关，自动发现服务并动态更新路由，省掉大量 Nginx 配置。",
+      "tags": ["反向代理", "网关", "自动发现"]
+    },
+    {
+      "full_name": "ansible/ansible",
+      "stars": 65000,
+      "language": "Python",
+      "category": "devops",
+      "desc_zh": "无需 Agent 的配置管理与自动化部署工具，YAML 描述批量操作，运维入门必学。",
+      "tags": ["自动化运维", "配置管理", "YAML"]
+    },
+    {
+      "full_name": "portainer/portainer",
+      "stars": 37000,
+      "language": "TypeScript",
+      "category": "devops",
+      "desc_zh": "Docker 与 Kubernetes 的图形化管理面板，容器、镜像、网络、卷都能可视化操作。",
+      "tags": ["图形面板", "Docker", "K8s"]
+    },
+    {
+      "full_name": "coollabsio/coolify",
+      "stars": 43000,
+      "language": "PHP",
+      "category": "devops",
+      "desc_zh": "自托管 PaaS，一条命令部署任意应用与数据库，是 Heroku、Netlify 的私有化替代。",
+      "tags": ["自托管", "PaaS", "一键部署"]
+    },
+    {
+      "full_name": "hashicorp/terraform",
+      "stars": 45000,
+      "language": "Go",
+      "category": "devops",
+      "desc_zh": "基础设施即代码工具，用声明式配置管理云资源，支持多云与状态版本化。",
+      "tags": ["IaC", "多云", "声明式"]
+    },
+    {
+      "full_name": "redis/redis",
+      "stars": 70000,
+      "language": "C",
+      "category": "data",
+      "desc_zh": "内存数据结构存储，缓存、队列、实时统计与分布式锁的首选，性能极高。",
+      "tags": ["缓存", "内存数据库", "高性能"]
+    },
+    {
+      "full_name": "supabase/supabase",
+      "stars": 88000,
+      "language": "TypeScript",
+      "category": "data",
+      "desc_zh": "基于 Postgres 的开源 Firebase 替代，自带认证、对象存储、实时订阅与边缘函数。",
+      "tags": ["Postgres", "实时", "Firebase 替代"]
+    },
+    {
+      "full_name": "prisma/prisma",
+      "stars": 43000,
+      "language": "TypeScript",
+      "category": "data",
+      "desc_zh": "TypeScript 类型安全的 ORM，schema 即数据模型，迁移与查询一站式搞定。",
+      "tags": ["ORM", "TypeScript", "数据库迁移"]
+    },
+    {
+      "full_name": "ClickHouse/ClickHouse",
+      "stars": 42000,
+      "language": "C++",
+      "category": "data",
+      "desc_zh": "列式分析数据库，亿级数据的即席查询几秒出结果，日志与埋点分析首选。",
+      "tags": ["列式存储", "OLAP", "极速查询"]
+    },
+    {
+      "full_name": "duckdb/duckdb",
+      "stars": 30000,
+      "language": "C++",
+      "category": "data",
+      "desc_zh": "嵌入式分析型数据库，无需部署即可用 SQL 分析本地 CSV/Parquet，数据科学利器。",
+      "tags": ["嵌入式", "SQL", "数据分析"]
+    },
+    {
+      "full_name": "milvus-io/milvus",
+      "stars": 36000,
+      "language": "Go",
+      "category": "data",
+      "desc_zh": "向量数据库，为语义检索、推荐与 RAG 设计，支持十亿级向量与多种索引类型。",
+      "tags": ["向量检索", "RAG", "相似度搜索"]
+    },
+    {
+      "full_name": "apache/airflow",
+      "stars": 40000,
+      "language": "Python",
+      "category": "data",
+      "desc_zh": "数据管道调度平台，用 DAG 定义任务依赖，可视化重跑与监控，数据工程标准工具。",
+      "tags": ["任务调度", "数据管道", "DAG"]
+    },
+    {
+      "full_name": "dbeaver/dbeaver",
+      "stars": 45000,
+      "language": "Java",
+      "category": "data",
+      "desc_zh": "通用数据库客户端，几乎支持所有主流数据库，SQL 编辑、ER 图与数据导出都很好用。",
+      "tags": ["数据库客户端", "SQL", "跨数据库"]
+    },
+    {
+      "full_name": "nocodb/nocodb",
+      "stars": 57000,
+      "language": "TypeScript",
+      "category": "data",
+      "desc_zh": "Airtable 的开源替代，把任意数据库变成电子表格界面，支持协作、API 与视图。",
+      "tags": ["电子表格", "Airtable 替代", "自托管"]
+    },
+    {
+      "full_name": "freeCodeCamp/freeCodeCamp",
+      "stars": 415000,
+      "language": "TypeScript",
+      "category": "learning",
+      "desc_zh": "免费的编程学习平台与课程源码，交互式练习 + 项目认证，零基础入门首选。",
+      "tags": ["免费课程", "零基础", "认证"]
+    },
+    {
+      "full_name": "EbookFoundation/free-programming-books",
+      "stars": 355000,
+      "language": "Markdown",
+      "category": "learning",
+      "desc_zh": "免费编程书籍大清单，按语言、主题、语种整理，找电子书和学习资料从这里开始。",
+      "tags": ["电子书", "资料清单", "多语言"]
+    },
+    {
+      "full_name": "kamranahmedse/developer-roadmap",
+      "stars": 335000,
+      "language": "TypeScript",
+      "category": "learning",
+      "desc_zh": "开发者成长路线图，前端、后端、DevOps、AI 都有交互式学习路径，知道下一步学什么。",
+      "tags": ["路线图", "学习路径", "职业规划"]
+    },
+    {
+      "full_name": "donnemartin/system-design-primer",
+      "stars": 295000,
+      "language": "Python",
+      "category": "learning",
+      "desc_zh": "系统设计入门教程，含大量架构案例与面试题拆解，后端面试必读。",
+      "tags": ["系统设计", "面试", "架构"]
+    },
+    {
+      "full_name": "30-seconds/30-seconds-of-code",
+      "stars": 127000,
+      "language": "JavaScript",
+      "category": "learning",
+      "desc_zh": "精选的 JS/CSS 短代码片段合集，每个都能在 30 秒内看懂，日常开发查漏补缺。",
+      "tags": ["代码片段", "速查", "JavaScript"]
+    },
+    {
+      "full_name": "TheAlgorithms/Python",
+      "stars": 198000,
+      "language": "Python",
+      "category": "learning",
+      "desc_zh": "用 Python 实现常用算法与数据结构，注释清晰，配合刷题与课程学习效果很好。",
+      "tags": ["算法", "数据结构", "Python"]
+    },
+    {
+      "full_name": "jwasham/coding-interview-university",
+      "stars": 340000,
+      "language": "Markdown",
+      "category": "learning",
+      "desc_zh": "从零自学计算机科学的完整计划，覆盖数据结构、算法、操作系统与面试准备。",
+      "tags": ["自学计划", "计算机基础", "面试"]
+    },
+    {
+      "full_name": "sindresorhus/awesome",
+      "stars": 380000,
+      "language": "Markdown",
+      "category": "learning",
+      "desc_zh": "各类 awesome 精选清单的总入口，从编程语言到平台工具，几乎覆盖所有技术领域。",
+      "tags": ["精选清单", "导航", "资源"]
+    },
+    {
+      "full_name": "krahets/hello-algo",
+      "stars": 115000,
+      "language": "Markdown",
+      "category": "learning",
+      "name_zh": "Hello 算法",
+      "desc_zh": "动画图解、可运行代码的数据结构与算法教程，中文写作，对新手非常友好。",
+      "tags": ["算法教程", "动画图解", "中文"]
+    },
+    {
+      "full_name": "Snailclimb/JavaGuide",
+      "stars": 150000,
+      "language": "Java",
+      "category": "learning",
+      "desc_zh": "中文 Java 学习与面试指南，覆盖基础、集合、并发、JVM、框架与实战经验。",
+      "tags": ["Java", "面试", "中文"]
+    },
+    {
+      "full_name": "mitmproxy/mitmproxy",
+      "stars": 40000,
+      "language": "Python",
+      "category": "security",
+      "desc_zh": "交互式 HTTPS 抓包与改包工具，调试接口、分析 App 流量与编写拦截脚本都很方便。",
+      "tags": ["抓包", "HTTPS", "调试"]
+    },
+    {
+      "full_name": "hashicorp/vault",
+      "stars": 34000,
+      "language": "Go",
+      "category": "security",
+      "desc_zh": "密钥与凭证管理服务，动态令牌、加密存储与审计日志，适合管理生产环境敏感配置。",
+      "tags": ["密钥管理", "加密", "审计"]
+    },
+    {
+      "full_name": "keycloak/keycloak",
+      "stars": 30000,
+      "language": "Java",
+      "category": "security",
+      "desc_zh": "单点登录与身份认证方案，支持 OIDC、SAML、LDAP，自带用户中心与管理后台。",
+      "tags": ["SSO", "OIDC", "身份认证"]
+    },
+    {
+      "full_name": "rapid7/metasploit-framework",
+      "stars": 36000,
+      "language": "Ruby",
+      "category": "security",
+      "desc_zh": "知名渗透测试框架，内置大量漏洞模块，用于授权范围内的漏洞验证与安全研究。",
+      "tags": ["渗透测试", "漏洞验证", "安全研究"]
+    },
+    {
+      "full_name": "sqlmapproject/sqlmap",
+      "stars": 35000,
+      "language": "Python",
+      "category": "security",
+      "desc_zh": "自动化的 SQL 注入检测与利用工具，支持多种数据库与注入手法，安全测试常用。",
+      "tags": ["SQL 注入", "安全测试", "自动化"]
+    },
+    {
+      "full_name": "projectdiscovery/nuclei",
+      "stars": 25000,
+      "language": "Go",
+      "category": "security",
+      "desc_zh": "基于模板的漏洞扫描器，速度极快且社区模板丰富，适合批量资产安全巡检。",
+      "tags": ["漏洞扫描", "模板化", "批量检测"]
+    },
+    {
+      "full_name": "gitleaks/gitleaks",
+      "stars": 18000,
+      "language": "Go",
+      "category": "security",
+      "desc_zh": "扫描 Git 仓库中的密钥泄露，可接入提交钩子与 CI，防止凭证被误提交。",
+      "tags": ["密钥泄露", "Git 扫描", "CI"]
+    },
+    {
+      "full_name": "trufflesecurity/trufflehog",
+      "stars": 20000,
+      "language": "Go",
+      "category": "security",
+      "desc_zh": "深度查找泄露凭证，并支持在线验证凭证是否仍然有效，误报率低。",
+      "tags": ["凭证扫描", "泄露检测", "验证"]
+    },
+    {
+      "full_name": "n8n-io/n8n",
+      "stars": 55000,
+      "language": "TypeScript",
+      "category": "automation",
+      "desc_zh": "节点式自动化工作流，可自托管，连接数百种服务，是 Zapier 的开源替代方案。",
+      "tags": ["工作流", "自托管", "集成"]
+    },
+    {
+      "full_name": "microsoft/playwright",
+      "stars": 78000,
+      "language": "TypeScript",
+      "category": "automation",
+      "desc_zh": "端到端浏览器测试框架，一个 API 驱动 Chromium/Firefox/Safari，自带并发与录制。",
+      "tags": ["E2E 测试", "浏览器自动化", "官方"]
+    },
+    {
+      "full_name": "puppeteer/puppeteer",
+      "stars": 94000,
+      "language": "TypeScript",
+      "category": "automation",
+      "desc_zh": "用 Node.js 控制 Chrome，做网页抓取、生成 PDF、自动截图与 UI 自动化测试。",
+      "tags": ["Chrome 自动化", "网页抓取", "截图"]
+    },
+    {
+      "full_name": "SeleniumHQ/selenium",
+      "stars": 33000,
+      "language": "Java",
+      "category": "automation",
+      "desc_zh": "老牌浏览器自动化框架，多语言绑定齐全，Web 自动化测试的行业标准之一。",
+      "tags": ["浏览器自动化", "多语言", "测试"]
+    },
+    {
+      "full_name": "scrapy/scrapy",
+      "stars": 56000,
+      "language": "Python",
+      "category": "automation",
+      "desc_zh": "成熟的 Python 爬虫框架，调度、去重、中间件与数据管道齐全，适合大规模抓取。",
+      "tags": ["爬虫框架", "Python", "大规模"]
+    },
+    {
+      "full_name": "huginn/huginn",
+      "stars": 47000,
+      "language": "Ruby",
+      "category": "automation",
+      "desc_zh": "自托管的 Agent 系统，监控网页变化并自动触发通知、写入或转发，像私人版的 IFTTT。",
+      "tags": ["监控", "自托管", "事件触发"]
+    },
+    {
+      "full_name": "home-assistant/core",
+      "stars": 82000,
+      "language": "Python",
+      "category": "automation",
+      "desc_zh": "智能家居自动化平台，数千个设备集成，把不同品牌的灯、传感器与家电统一编排。",
+      "tags": ["智能家居", "自动化", "物联网"]
+    },
+    {
+      "full_name": "PrefectHQ/prefect",
+      "stars": 20000,
+      "language": "Python",
+      "category": "automation",
+      "desc_zh": "以 Python 为中心的现代工作流编排工具，写普通函数即可获得重试、调度与可观测性。",
+      "tags": ["工作流编排", "Python", "调度"]
+    },
+    {
+      "full_name": "mrdoob/three.js",
+      "stars": 108000,
+      "language": "JavaScript",
+      "category": "media",
+      "desc_zh": "WebGL 3D 引擎，几行代码就能在网页里跑起 3D 场景，可视化与创意项目常用。",
+      "tags": ["3D", "WebGL", "网页渲染"]
+    },
+    {
+      "full_name": "excalidraw/excalidraw",
+      "stars": 105000,
+      "language": "TypeScript",
+      "category": "media",
+      "desc_zh": "手绘风白板，支持实时协作与导出，画架构图、流程图和脑图都非常顺手。",
+      "tags": ["白板", "手绘风", "协作"]
+    },
+    {
+      "full_name": "tldraw/tldraw",
+      "stars": 42000,
+      "language": "TypeScript",
+      "category": "media",
+      "desc_zh": "无限画布 SDK，面向 React 应用，几行代码就能嵌入可编辑的白板与绘图体验。",
+      "tags": ["无限画布", "SDK", "React"]
+    },
+    {
+      "full_name": "penpot/penpot",
+      "stars": 40000,
+      "language": "Clojure",
+      "category": "media",
+      "desc_zh": "开源设计协作平台，Figma 的替代方案，基于 Web、可自托管，支持设计稿与原型。",
+      "tags": ["设计工具", "Figma 替代", "自托管"]
+    },
+    {
+      "full_name": "FFmpeg/FFmpeg",
+      "stars": 50000,
+      "language": "C",
+      "category": "media",
+      "desc_zh": "全能音视频处理工具，转码、剪辑、压制、抽帧与水印几乎无所不能，命令行即可批处理。",
+      "tags": ["音视频", "转码", "命令行"]
+    },
+    {
+      "full_name": "jgraph/drawio",
+      "stars": 55000,
+      "language": "JavaScript",
+      "category": "media",
+      "desc_zh": "流程图与图表工具，draw.io 的核心开源代码，支持离线使用与多种导出格式。",
+      "tags": ["流程图", "图表", "离线"]
+    },
+    {
+      "full_name": "chartjs/Chart.js",
+      "stars": 66000,
+      "language": "JavaScript",
+      "category": "media",
+      "desc_zh": "简单好用的 HTML5 图表库，基于 Canvas 绘制，折线、柱状、雷达图开箱即用。",
+      "tags": ["图表", "Canvas", "轻量"]
+    },
+    {
+      "full_name": "godotengine/godot",
+      "stars": 102000,
+      "language": "C++",
+      "category": "media",
+      "desc_zh": "开源 2D/3D 游戏引擎，编辑器轻量、GDScript 易学，独立游戏开发者的热门选择。",
+      "tags": ["游戏引擎", "2D/3D", "开源"]
+    },
+    {
+      "full_name": "opencv/opencv",
+      "stars": 84000,
+      "language": "C++",
+      "category": "media",
+      "desc_zh": "计算机视觉库，图像处理、特征检测、目标识别的基础设施，多语言绑定齐全。",
+      "tags": ["计算机视觉", "图像处理", "多语言"]
+    }
+  ]
+}

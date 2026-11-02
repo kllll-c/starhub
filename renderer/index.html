@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>StarHub · GitHub 高星项目库</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="window">
+      <header class="titlebar">
+        <div class="titlebar-left">
+          <div class="logo" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22">
+              <path
+                d="M12 2.6l2.72 5.9 6.28.72-4.62 4.37 1.24 6.28L12 16.9l-5.62 2.97 1.24-6.28L3 9.22l6.28-.72L12 2.6z"
+                fill="url(#g1)"
+              />
+              <defs>
+                <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#7aa2ff" />
+                  <stop offset="1" stop-color="#b98bff" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">StarHub</span>
+            <span class="brand-sub">GitHub 高星项目库</span>
+          </div>
+        </div>
+        <div class="titlebar-drag"></div>
+        <div class="titlebar-right">
+          <button class="ghost-btn theme-btn" id="btnTheme" title="切换到亮色主题" aria-label="切换亮色/暗色主题">
+            <svg class="ico ico-theme-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.2" />
+              <path d="M12 2.4v2.4M12 19.2v2.4M2.4 12h2.4M19.2 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7" />
+            </svg>
+            <svg class="ico ico-theme-moon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.5 13.4a8.6 8.6 0 0 1-9.9-9.9 8.6 8.6 0 1 0 9.9 9.9z" />
+            </svg>
+          </button>
+          <button class="ghost-btn" id="btnReload" title="刷新当前分类">刷新</button>
+          <button class="ghost-btn" id="btnAbout" title="关于 StarHub">关于</button>
+          <button class="ghost-btn" id="btnSettings" title="设置">设置</button>
+        </div>
+      </header>
+
+      <div class="body">
+        <aside class="sidebar">
+          <div class="side-block">
+            <div class="side-label">发现</div>
+            <nav id="categoryNav" class="side-nav"></nav>
+          </div>
+          <div class="side-block">
+            <div class="side-label">我的</div>
+            <nav id="libraryNav" class="side-nav">
+              <button class="nav-item" data-tab="favorites">
+                <span class="nav-emoji">❤️</span><span class="nav-name">我的收藏</span>
+                <span class="nav-count" id="countFavorites">0</span>
+              </button>
+              <button class="nav-item" data-tab="likes">
+                <span class="nav-emoji">👍</span><span class="nav-name">我点赞的</span>
+                <span class="nav-count" id="countLikes">0</span>
+              </button>
+              <button class="nav-item" data-tab="curated">
+                <span class="nav-emoji">📦</span><span class="nav-name">内置精选库</span>
+                <span class="nav-count" id="countCurated">0</span>
+              </button>
+            </nav>
+          </div>
+          <div class="side-footer">
+            <div class="api-state" id="apiState">
+              <span class="dot"></span>
+              <span id="apiStateText">正在连接 GitHub…</span>
+            </div>
+            <div class="side-tip">数据来源：GitHub 官方 API · 收藏与点赞仅保存在本机</div>
+          </div>
+        </aside>
+
+        <main class="main">
+          <div class="toolbar">
+            <div class="search-wrap">
+              <span class="search-icon">⌕</span>
+              <input
+                id="searchInput"
+                class="search-input"
+                type="search"
+                placeholder="搜索仓库名、关键词或标签（如「桌面应用」）"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button class="search-clear" id="searchClear" title="清空">×</button>
+              <div class="search-hints" id="searchHints" hidden></div>
+            </div>
+            <div class="toolbar-right">
+              <div class="seg" id="sourceSeg">
+                <button data-source="online" class="seg-btn active">在线发现</button>
+                <button data-source="curated" class="seg-btn">内置精选</button>
+              </div>
+              <label class="select-wrap">
+                <span>排序</span>
+                <select id="sortSelect"></select>
+              </label>
+              <label class="select-wrap">
+                <span>语言</span>
+                <select id="langSelect"></select>
+              </label>
+              <label class="select-wrap">
+                <span>最低 Star</span>
+                <select id="starsSelect">
+                  <option value="0">不限</option>
+                  <option value="5000">5000+</option>
+                  <option value="10000">1 万+</option>
+                  <option value="30000">3 万+</option>
+                  <option value="50000">5 万+</option>
+                  <option value="100000">10 万+</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="content" id="content">
+            <section class="content-head">
+              <div class="head-main">
+                <h1 id="headTitle">高星精选</h1>
+                <p id="headBlurb">全站 Star 最多的开源项目</p>
+              </div>
+              <div class="head-meta" id="headMeta"></div>
+            </section>
+
+            <div class="setup-tip" id="setupTip" hidden></div>
+
+            <div class="notice" id="notice" hidden></div>
+
+            <div class="grid" id="grid"></div>
+
+            <div class="list-footer" id="listFooter">
+              <button class="more-btn" id="btnMore">加载更多</button>
+              <span class="footer-note" id="footerNote"></span>
+            </div>
+
+            <div class="empty" id="empty" hidden>
+              <div class="empty-emoji">🛰️</div>
+              <div class="empty-title">这里还没有内容</div>
+              <div class="empty-desc" id="emptyDesc">换个分类或关键词试试。</div>
+            </div>
+          </div>
+        </main>
+
+        <aside class="drawer" id="drawer" hidden>
+          <div class="drawer-head">
+            <div class="drawer-title">
+              <img id="drawerAvatar" class="drawer-avatar" alt="" />
+              <div>
+                <div class="drawer-name" id="drawerName">仓库</div>
+                <div class="drawer-owner" id="drawerOwner"></div>
+              </div>
+            </div>
+            <button class="icon-btn" id="btnCloseDrawer" title="关闭">×</button>
+          </div>
+
+          <div class="drawer-body" id="drawerBody">
+            <div class="detail-loading">正在加载仓库详情…</div>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="statusbar">
+        <div class="status-left">
+          <span id="statusSource">在线发现</span>
+          <span class="sep">·</span>
+          <span id="statusRate">接口额度：--</span>
+          <span class="sep">·</span>
+          <span id="statusTranslate">汉化：--</span>
+        </div>
+        <div class="status-right">
+          <span id="statusCache"></span>
+          <span class="sep">·</span>
+          <span>StarHub v<span id="statusVersion">1.0.0</span></span>
+        </div>
+      </footer>
+    </div>
+
+    <div class="toast-stack" id="toastStack"></div>
+
+    <div class="modal" id="settingsModal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2>设置</h2>
+          <button class="icon-btn" id="btnCloseSettings">×</button>
+        </div>
+        <div class="modal-body">
+          <section class="form-section">
+            <h3>GitHub 接口</h3>
+            <p class="form-hint">
+              未登录时 GitHub 每小时只允许 60 次接口调用、搜索每分钟 10 次。填入个人访问令牌（
+              <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" id="linkToken">settings/tokens</a>
+              ，只需 public_repo 只读权限）后可提升到每小时 5000 次。
+            </p>
+            <label class="field">
+              <span>Personal Access Token（可选）</span>
+              <input id="inputToken" type="password" placeholder="ghp_xxx（留空则使用匿名额度）" />
+            </label>
+          </section>
+
+          <section class="form-section">
+            <h3>汉化翻译</h3>
+            <label class="field">
+              <span>翻译引擎</span>
+              <select id="inputProvider">
+                <option value="mymemory">MyMemory 免费在线翻译（无需 Key，有每日额度）</option>
+                <option value="openai">AI 翻译（OpenAI 兼容接口，质量最好）</option>
+                <option value="baidu">百度翻译（需 APP ID + 密钥，按字符计费）</option>
+                <option value="youdao">有道翻译（需应用 ID + 应用密钥，按字符计费）</option>
+                <option value="off">仅离线术语表（不联网，只汉化标题）</option>
+              </select>
+            </label>
+            <label class="field check">
+              <input id="inputAutoTranslate" type="checkbox" />
+              <span>自动汉化列表简介（自动识别英语 / 日语 / 韩语 / 俄语 / 西语等）</span>
+            </label>
+            <label class="field check">
+              <input id="inputAutoReadme" type="checkbox" />
+              <span>自动汉化 README（打开详情即在后台翻译）</span>
+            </label>
+            <label class="field">
+              <span>MyMemory 联系邮箱（可选，用于提升免费额度）</span>
+              <input id="inputEmail" type="email" placeholder="you@example.com" />
+            </label>
+            <p class="form-hint">
+              MyMemory 免费额度约每天 5000 词（按出口 IP 计算），一次长 README 汉化就可能耗尽。免费引擎下自动汉化 README 会先翻前 2500 个字符，其余内容可点「重新汉化」继续或切换 AI 翻译（无每日额度限制，可整篇自动汉化）。
+            </p>
+            <div class="field-row">
+              <label class="field">
+                <span>AI 接口地址</span>
+                <input id="inputBaseUrl" type="text" placeholder="https://api.openai.com/v1" />
+              </label>
+              <label class="field">
+                <span>模型</span>
+                <input id="inputModel" type="text" placeholder="gpt-4o-mini / deepseek-chat" />
+              </label>
+            </div>
+            <label class="field">
+              <span>AI 接口 Key</span>
+              <input id="inputApiKey" type="password" placeholder="sk-xxx（仅保存在本机）" />
+            </label>
+            <p class="form-hint">
+              兼容 OpenAI 协议的国内服务同样可用，例如 DeepSeek（https://api.deepseek.com/v1）、Moonshot、通义等。
+            </p>
+            <div class="field-row">
+              <label class="field">
+                <span>百度翻译 APP ID</span>
+                <input id="inputBaiduAppId" type="text" placeholder="在百度翻译开放平台「管理控制台」获取" />
+              </label>
+              <label class="field">
+                <span>百度翻译密钥</span>
+                <input id="inputBaiduKey" type="password" placeholder="••••••（仅保存在本机）" />
+              </label>
+            </div>
+            <p class="form-hint">
+              百度通用翻译接口地址已内置（https://fanyi-api.baidu.com/api/trans/vip/translate），无需填写；只需填 APP ID 与密钥。标准版 QPS 为 1，程序会自动限速并按错误码重试。
+            </p>
+            <div class="field-row">
+              <label class="field">
+                <span>有道翻译应用 ID</span>
+                <input id="inputYoudaoAppKey" type="text" placeholder="在网易有道智云控制台「我的应用」获取" />
+              </label>
+              <label class="field">
+                <span>有道翻译应用密钥</span>
+                <input id="inputYoudaoSecret" type="password" placeholder="••••••（仅保存在本机）" />
+              </label>
+            </div>
+            <p class="form-hint">
+              有道接口地址已内置（https://openapi.youdao.com/api），使用 v3 签名，无需填写；应用 ID 与应用密钥需成对填写，任何一个缺失都会回退到免费在线翻译。获取路径：ai.youdao.com → 控制台 → 应用管理 → 我的应用（新建「文本翻译」应用）。
+            </p>
+          </section>
+
+          <section class="form-section">
+            <h3>本地数据</h3>
+            <div class="row-actions">
+              <button class="ghost-btn" id="btnClearCache">清空接口缓存</button>
+              <span class="form-hint" id="cacheStatsText">缓存文件：--</span>
+            </div>
+            <p class="form-hint">设置、收藏与点赞保存在本机的 userData 目录，不会上传到任何服务器。</p>
+          </section>
+        </div>
+        <div class="modal-foot">
+          <button class="btn-ghost" id="btnCancelSettings">取消</button>
+          <button class="btn-primary" id="btnSaveSettings">保存设置</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="aboutModal" hidden>
+      <div class="modal-card small">
+        <div class="modal-head">
+          <h2>关于 StarHub</h2>
+          <button class="icon-btn" id="btnCloseAbout">×</button>
+        </div>
+        <div class="modal-body">
+          <p>StarHub 是一个 GitHub 高星项目聚合桌面客户端：</p>
+          <ul class="about-list">
+            <li>按用途分类浏览（13 个用途分类 + 「全部」汇总视图 + 全站高星榜，其中「应用」跨类收纳所有成品应用）</li>
+            <li>按 Star 数 / Release 下载量 / 首字母 A-Z 排序</li>
+            <li>每个仓库自动打上中文标签（形态 + 用途），点击标签或在搜索框输入标签即可筛选</li>
+            <li>应用内渲染 README 预览，无需跳转浏览器</li>
+            <li>外语自动汉化：自动识别英 / 日 / 韩 / 俄 / 西 / 法 / 德等语种，简介与 README 都可在后台自动译成中文（支持 AI 翻译 / 百度翻译 / MyMemory 免费接口 / 离线术语表）</li>
+            <li>一键打开原站地址、复制链接</li>
+            <li>收藏与点赞，数据保存在本机</li>
+          </ul>
+          <p class="form-hint">
+            内置精选库中的中文名与简介为人工整理；在线接口数据版权归 GitHub 及各仓库作者所有。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script src="./vendor/marked.umd.js"></script>
+    <script src="./vendor/purify.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

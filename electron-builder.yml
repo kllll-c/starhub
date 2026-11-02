@@ -1,0 +1,46 @@
+# electron-builder 配置：把 StarHub 打成 Windows 安装包（NSIS）
+# 用法：npm run dist:installer  →  产物在 dist-installer/
+appId: com.starhub.desktop
+productName: StarHub
+copyright: Copyright © 2026 StarHub
+directories:
+  output: dist-installer
+  buildResources: build
+
+# 只打包运行所需内容（渲染层的 marked / DOMPurify 已在 renderer/vendor 内，无需 node_modules）
+files:
+  - src/**/*
+  - renderer/**/*
+  - package.json
+  - '!node_modules/**/*'
+  - '!**/*.map'
+
+# 安装目录里附一份上手说明（配置翻译引擎的步骤都在里面）
+extraFiles:
+  - from: build/使用说明.txt
+    to: 使用说明.txt
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  executableName: StarHub
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false # 向导式安装（可选择安装目录）
+  perMachine: false # 默认按当前用户安装，不需要管理员权限
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: StarHub
+  uninstallDisplayName: StarHub
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  installerLanguages:
+    - zh_CN
+  language: '2052'

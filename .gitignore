@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-installer/
+build/
+.cache/
+.userdata*/
+*.log
+.screenshots/
+.trae-html-share-packages/
+*.tmp
