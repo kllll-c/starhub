@@ -16,6 +16,8 @@ const state = {
   settings: {},
   rate: {},
   theme: 'dark', // dark | light
+  version: '1.0.0',
+  update: null, // { ok, current, latest, hasUpdate, downloadUrl, ... }
   view: 'browse', // browse | favorites | likes
   tab: 'top',
   source: 'online', // online | curated
@@ -85,6 +87,8 @@ const dom = {
   toasts: el('toastStack'),
   settingsModal: el('settingsModal'),
   aboutModal: el('aboutModal'),
+  updateTip: el('updateTip'),
+  aboutUpdateText: el('aboutUpdateText'),
 };
 
 /* ---------------- 主题（亮 / 暗） ---------------- */
@@ -130,6 +134,120 @@ function toggleTheme() {
 
 // 首屏先按上次的选择上色（只读 localStorage，不用等 IPC），避免亮色用户启动时闪一下暗色
 paintTheme(readStoredTheme());
+
+/* ---------------- 更新提示（读取 GitHub Releases） ---------------- */
+
+// 24 小时检查一次；「跳过此版本」也记在 localStorage，避免每次启动都打扰
+const UPDATE_KEY = 'starhub.updateCheck';
+const UPDATE_INTERVAL = 24 * 60 * 60 * 1000;
+const RELEASE_PAGE = 'https://github.com/kllll-c/starhub/releases/latest';
+
+function readUpdateMeta() {
+  try {
+    return JSON.parse(localStorage.getItem(UPDATE_KEY) || '{}') || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeUpdateMeta(patch) {
+  try {
+    localStorage.setItem(UPDATE_KEY, JSON.stringify({ ...readUpdateMeta(), ...patch }));
+  } catch (_) {
+    /* localStorage 不可写时忽略，不影本次会话的提示 */
+  }
+}
+
+function formatBytes(bytes) {
+  const n = Number(bytes) || 0;
+  if (n >= 1048576) return `${(n / 1048576).toFixed(1)} MB`;
+  if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${n} B`;
+}
+
+function renderUpdateTip() {
+  const info = state.update;
+  const meta = readUpdateMeta();
+  const show = Boolean(
+    info && info.ok && info.hasUpdate && info.latest && meta.skippedVersion !== info.latest,
+  );
+  if (!show) {
+    dom.updateTip.hidden = true;
+    dom.updateTip.innerHTML = '';
+    return;
+  }
+  const hint = info.downloadSize
+    ? `安装包 ${formatBytes(info.downloadSize)}`
+    : '点「下载新版」前往 Release 页面';
+  dom.updateTip.innerHTML = `
+    <div class="setup-tip-text">
+      <span class="update-chip">NEW</span>
+      <strong>发现新版本 v${esc(info.latest)}</strong>（当前 v${esc(state.version)}）· ${esc(hint)}
+    </div>
+    <div class="setup-tip-actions">
+      <button class="tip-btn primary" data-act="update-download">下载新版</button>
+      <button class="tip-btn ghost" data-act="update-later">稍后提醒</button>
+      <button class="tip-btn ghost" data-act="update-skip">跳过此版本</button>
+    </div>`;
+  dom.updateTip.hidden = false;
+}
+
+function updateAboutUpdate() {
+  if (!dom.aboutUpdateText) return;
+  const info = state.update;
+  if (!info) {
+    dom.aboutUpdateText.textContent = '';
+    return;
+  }
+  if (!info.ok) {
+    dom.aboutUpdateText.textContent = info.error || '检查更新失败';
+    return;
+  }
+  dom.aboutUpdateText.textContent = info.hasUpdate
+    ? `发现新版本 v${info.latest}（当前 v${state.version}）`
+    : `已是最新版本（v${state.version}）`;
+}
+
+async function checkUpdate({ force = false, silent = true } = {}) {
+  const meta = readUpdateMeta();
+  if (!force && meta.at && Date.now() - meta.at < UPDATE_INTERVAL) return state.update;
+  writeUpdateMeta({ at: Date.now() });
+  let result;
+  try {
+    result = await api.checkUpdate({ force });
+  } catch (err) {
+    result = { ok: false, current: state.version, error: `检查更新失败：${err.message}` };
+  }
+  state.update = result || null;
+  renderUpdateTip();
+  updateAboutUpdate();
+  if (!silent) {
+    if (!result || !result.ok) toast((result && result.error) || '检查更新失败', 'err');
+    else if (result.hasUpdate) toast(`发现新版本 v${result.latest}，可前往下载`, 'ok');
+    else toast(`已是最新版本 v${state.version}`, 'ok');
+  }
+  return state.update;
+}
+
+function handleUpdateAction(act) {
+  const info = state.update || {};
+  if (act === 'update-download') {
+    api.openExternal(info.downloadUrl || info.pageUrl || RELEASE_PAGE).catch(() => {});
+    toast('已在浏览器打开下载页面', 'ok');
+    return;
+  }
+  if (act === 'update-later') {
+    writeUpdateMeta({ at: Date.now() });
+    renderUpdateTip();
+    toast('好的，24 小时后再提醒');
+    return;
+  }
+  if (act === 'update-skip') {
+    writeUpdateMeta({ at: Date.now(), skippedVersion: info.latest || '' });
+    renderUpdateTip();
+    toast(`已跳过 v${info.latest || ''}，下个版本仍会提醒`);
+  }
+}
 
 /* ---------------- 工具函数 ---------------- */
 
@@ -295,7 +413,9 @@ async function init() {
   // 以 settings.json 为准（localStorage 只用于首屏快速上色）
   applyTheme(data.settings.theme === 'light' ? 'light' : 'dark');
 
-  dom.statusVersion.textContent = data.version || '1.0.0';
+  state.version = data.version || '1.0.0';
+  dom.statusVersion.textContent = state.version;
+  el('aboutVersion').textContent = state.version;
   el('countCurated').textContent = state.curated.total;
 
   buildSidebar();
@@ -310,6 +430,9 @@ async function init() {
   await refreshCacheStats();
 
   await load({ reset: true });
+
+  // 首屏加载完成后延迟检查更新（不抢夺 GitHub 接口额度，失败静默）
+  setTimeout(() => checkUpdate({ silent: true }), 1500);
 }
 
 async function refreshCacheStats() {
@@ -678,6 +801,12 @@ function bindEvents() {
 
   el('btnSettings').addEventListener('click', openSettings);
   el('btnTheme').addEventListener('click', toggleTheme);
+
+  // 更新提示条：下载 / 稍后提醒 / 跳过此版本
+  dom.updateTip.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-act]');
+    if (btn) handleUpdateAction(btn.dataset.act);
+  });
   el('btnCloseSettings').addEventListener('click', closeSettings);
   el('btnCancelSettings').addEventListener('click', closeSettings);
   el('btnSaveSettings').addEventListener('click', saveSettings);
@@ -696,6 +825,8 @@ function bindEvents() {
   el('btnCloseAbout').addEventListener('click', () => {
     dom.aboutModal.hidden = true;
   });
+
+  el('btnCheckUpdate').addEventListener('click', () => checkUpdate({ force: true, silent: false }));
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {

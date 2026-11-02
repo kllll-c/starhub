@@ -282,6 +282,112 @@ function applyWindowTheme(theme) {
   return { ok: true, theme: next };
 }
 
+// 更新提示：只读 GitHub Releases 接口拿最新版本号，不下载文件、不上报任何用户数据
+const UPDATE_SOURCE = {
+  owner: 'kllll-c',
+  repo: 'starhub',
+  page: 'https://github.com/kllll-c/starhub/releases/latest',
+};
+
+function normalizeVersion(value) {
+  return String(value || '').trim().replace(/^[vV]/, '');
+}
+
+// 只比较 x.y.z 的数字位（0.10.0 > 0.9.1），缺失按 0 处理，预发布后缀忽略
+function compareVersions(a, b) {
+  const toParts = (v) => normalizeVersion(v).split(/[.+-]/).map((n) => parseInt(n, 10) || 0);
+  const pa = toParts(a);
+  const pb = toParts(b);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i += 1) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+function buildUpdatePayload(release, current) {
+  const latest = normalizeVersion(release.tag || release.name || '');
+  const assets = (release.assets || []).filter((a) => a && a.name);
+  const setup = assets.find((a) => /setup.*\.exe$/i.test(a.name)) || assets[0] || null;
+  return {
+    ok: true,
+    current,
+    latest,
+    hasUpdate: latest ? compareVersions(latest, current) > 0 : false,
+    name: release.name || release.tag || '',
+    pageUrl: release.pageUrl || UPDATE_SOURCE.page,
+    downloadUrl: setup ? setup.url : release.pageUrl || UPDATE_SOURCE.page,
+    downloadName: setup ? setup.name : '',
+    downloadSize: setup ? setup.size : 0,
+    publishedAt: release.publishedAt || '',
+    notes: String(release.notes || '').replace(/\r/g, '').trim().slice(0, 300),
+  };
+}
+
+let updateCache = { at: 0, data: null };
+
+/**
+ * 查询最新 Release。非强制检查有 10 分钟进程内缓存；
+ * mockLatest 只在自检（--smoke / --preview）时生效，用于验证提示条渲染。
+ */
+async function checkUpdate({ force = false, mockLatest = '' } = {}) {
+  const current = app.getVersion();
+  const now = Date.now();
+  if (!force && updateCache.data && now - updateCache.at < 10 * 60 * 1000) {
+    return { ...updateCache.data, cached: true };
+  }
+  if (isSelfCheck && mockLatest) {
+    return buildUpdatePayload(
+      {
+        tag: mockLatest,
+        name: `StarHub ${normalizeVersion(mockLatest)}`,
+        publishedAt: new Date().toISOString(),
+        notes: '自检注入的模拟版本',
+      },
+      current,
+    );
+  }
+  const apiUrl = `https://api.github.com/repos/${UPDATE_SOURCE.owner}/${UPDATE_SOURCE.repo}/releases/latest`;
+  try {
+    const res = await fetch(apiUrl, {
+      headers: { 'User-Agent': 'StarHub-UpdateCheck', Accept: 'application/vnd.github+json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.status === 404) {
+      return { ok: true, current, latest: '', hasUpdate: false, pageUrl: UPDATE_SOURCE.page };
+    }
+    if (!res.ok) {
+      const hint =
+        res.status === 403 || res.status === 429
+          ? 'GitHub 接口额度已用完，稍后会自动重试'
+          : `GitHub 返回 ${res.status}`;
+      return { ok: false, current, error: `检查更新失败：${hint}` };
+    }
+    const release = await res.json();
+    const payload = buildUpdatePayload(
+      {
+        tag: release.tag_name,
+        name: release.name,
+        notes: release.body,
+        publishedAt: release.published_at,
+        pageUrl: release.html_url,
+        assets: (release.assets || []).map((a) => ({
+          name: a.name,
+          size: a.size,
+          url: a.browser_download_url,
+        })),
+      },
+      current,
+    );
+    updateCache = { at: now, data: payload };
+    return payload;
+  } catch (err) {
+    const message = err && err.name === 'TimeoutError' ? '请求超时' : err.message;
+    return { ok: false, current, error: `检查更新失败：${message}` };
+  }
+}
+
 function createWindow() {
   const theme = currentTheme();
   const colors = THEME_COLORS[theme];
@@ -528,6 +634,45 @@ function createWindow() {
         await wait(600);
       });
 
+      await step('更新提示', async () => {
+        // 1) 真实接口：GitHub Releases 最新版本（当前 1.0.0，应判定为已是最新）
+        const real = await mainWindow.webContents.executeJavaScript(
+          'window.starhub.checkUpdate({ force: true })',
+        );
+        console.log(
+          '[smoke] 更新接口:',
+          JSON.stringify({
+            ok: real.ok,
+            current: real.current,
+            latest: real.latest,
+            hasUpdate: real.hasUpdate,
+            download: real.downloadName,
+            size: real.downloadSize,
+            error: real.error,
+          }),
+        );
+        // 2) 注入模拟版本，验证提示条渲染（mockLatest 仅在自检时生效）
+        const shown = await mainWindow.webContents.executeJavaScript(
+          '(function(){ return window.starhub.checkUpdate({ force: true, mockLatest: "9.9.9" }).then(function(r){ state.update = r; renderUpdateTip(); return JSON.stringify({shown: !document.getElementById("updateTip").hidden, text: document.getElementById("updateTip").textContent.replace(/\\s+/g," ").trim(), buttons: document.querySelectorAll("#updateTip [data-act]").length, bg: getComputedStyle(document.getElementById("updateTip")).backgroundImage.slice(0,42)}); }); })()',
+        );
+        console.log('[smoke] 更新提示条:', shown);
+        await shot('screenshot-update-tip.png');
+        // 3) 点「跳过此版本」：提示条隐藏并记住版本号
+        const skipped = await mainWindow.webContents.executeJavaScript(
+          '(function(){ var b=document.querySelector("#updateTip [data-act=update-skip]"); if(!b) return "no-btn"; b.click(); return JSON.stringify({hidden: document.getElementById("updateTip").hidden, meta: localStorage.getItem("starhub.updateCheck")}); })()',
+        );
+        console.log('[smoke] 跳过此版本:', skipped);
+        // 4) 关于弹窗的版本行与「检查更新」按钮
+        const about = await mainWindow.webContents.executeJavaScript(
+          '(function(){ document.getElementById("btnAbout").click(); return JSON.stringify({version: document.getElementById("aboutVersion").textContent, text: document.getElementById("aboutUpdateText").textContent, hasBtn: !!document.getElementById("btnCheckUpdate")}); })()',
+        );
+        console.log('[smoke] 关于弹窗:', about);
+        await wait(600);
+        await shot('screenshot-about.png');
+        await mainWindow.webContents.executeJavaScript('document.getElementById("btnCloseAbout").click(); true');
+        await wait(400);
+      });
+
       app.quit();
     });
   }
@@ -740,6 +885,11 @@ function registerIpc() {
 
   // 标题栏按钮切换亮/暗主题：同步窗口底色与系统按钮的配色
   ipcMain.handle('window:theme', (_event, theme) => applyWindowTheme(theme));
+
+  // 更新提示：查询 GitHub 最新 Release，由渲染层决定是否弹出提示条
+  ipcMain.handle('update:check', (_event, { force = false, mockLatest = '' } = {}) =>
+    checkUpdate({ force, mockLatest }),
+  );
 
   ipcMain.handle('translate:status', () => {
     const s = store.getSettings();

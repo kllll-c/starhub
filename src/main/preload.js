@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('starhub', {
   saveSettings: (patch) => ipcRenderer.invoke('settings:save', patch),
   translateStatus: () => ipcRenderer.invoke('translate:status'),
   setTheme: (theme) => ipcRenderer.invoke('window:theme', theme),
+  checkUpdate: (params) => ipcRenderer.invoke('update:check', params || {}),
   openExternal: (url) => ipcRenderer.invoke('shell:open', url),
   copy: (text) => ipcRenderer.invoke('clipboard:copy', text),
   clearCache: () => ipcRenderer.invoke('cache:clear'),

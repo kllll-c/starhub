@@ -682,6 +682,42 @@ html[data-theme="light"] .theme-btn .ico-theme-sun {
   color: var(--text-dim);
 }
 
+/* 更新提示条：与首次使用引导共用布局类，仅换配色 */
+.update-tip {
+  border-color: rgba(88, 214, 168, 0.34);
+  background: linear-gradient(90deg, rgba(88, 214, 168, 0.14), rgba(111, 155, 255, 0.08));
+  color: #cdefe0;
+}
+
+.update-chip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(88, 214, 168, 0.4);
+  background: rgba(88, 214, 168, 0.22);
+  color: #b7f2da;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+
+/* 关于弹窗的版本行 */
+.about-version {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.about-version .about-update {
+  color: var(--text-mute);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
@@ -1793,6 +1829,18 @@ html[data-theme="light"] .tip-btn.primary:hover {
 
 html[data-theme="light"] .tip-btn.ghost {
   border-color: rgba(17, 35, 66, 0.12);
+}
+
+html[data-theme="light"] .update-tip {
+  border-color: rgba(9, 138, 99, 0.32);
+  background: linear-gradient(90deg, #e8f8f1, #eef3ff);
+  color: #14543a;
+}
+
+html[data-theme="light"] .update-chip {
+  border-color: rgba(9, 138, 99, 0.3);
+  background: rgba(9, 138, 99, 0.12);
+  color: #0c6447;
 }
 
 html[data-theme="light"] .card {

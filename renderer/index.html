@@ -134,6 +134,8 @@
 
             <div class="setup-tip" id="setupTip" hidden></div>
 
+            <div class="setup-tip update-tip" id="updateTip" hidden></div>
+
             <div class="notice" id="notice" hidden></div>
 
             <div class="grid" id="grid"></div>
@@ -302,6 +304,11 @@
           <button class="icon-btn" id="btnCloseAbout">×</button>
         </div>
         <div class="modal-body">
+          <div class="about-version">
+            <span>当前版本 v<span id="aboutVersion">1.0.0</span></span>
+            <button class="tip-btn ghost" id="btnCheckUpdate">检查更新</button>
+            <span class="about-update" id="aboutUpdateText"></span>
+          </div>
           <p>StarHub 是一个 GitHub 高星项目聚合桌面客户端：</p>
           <ul class="about-list">
             <li>按用途分类浏览（13 个用途分类 + 「全部」汇总视图 + 全站高星榜，其中「应用」跨类收纳所有成品应用）</li>
@@ -311,6 +318,8 @@
             <li>外语自动汉化：自动识别英 / 日 / 韩 / 俄 / 西 / 法 / 德等语种，简介与 README 都可在后台自动译成中文（支持 AI 翻译 / 百度翻译 / MyMemory 免费接口 / 离线术语表）</li>
             <li>一键打开原站地址、复制链接</li>
             <li>收藏与点赞，数据保存在本机</li>
+            <li>亮 / 暗主题一键切换（标题栏最左侧按钮，选择自动记住）</li>
+            <li>自动检查新版本：有更新时在列表上方提示，可前往下载或跳过该版本</li>
           </ul>
           <p class="form-hint">
             内置精选库中的中文名与简介为人工整理；在线接口数据版权归 GitHub 及各仓库作者所有。
